@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RTV Inventory Hub | Reports</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --secondary: #64748b;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --light: #f8fafc;
+            --dark: #1e293b;
+            --card-bg: #ffffff;
+            --border: #e2e8f0;
+            --sidebar-width: 260px;
+            --border-radius: 12px;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --transition: all 0.3s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f1f5f9;
+            color: #334155;
+            line-height: 1.6;
+        }
+
+        .app-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--dark);
+            color: white;
+            height: 100vh;
+            position: fixed;
+            overflow-y: auto;
+            z-index: 1000;
+        }
+
+        .sidebar-header {
+            padding: 1.5rem 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .sidebar-logo {
+            height: 40px;
+            width: 40px;
+            object-fit: contain;
+        }
+
+        .sidebar-header h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .sidebar-menu {
+            padding: 1rem 0;
+        }
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 1.5rem;
+            color: #cbd5e1;
+            text-decoration: none;
+            transition: var(--transition);
+            gap: 0.75rem;
+        }
+
+        .menu-item:hover, .menu-item.active {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .menu-item i {
+            width: 20px;
+            text-align: center;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: var(--sidebar-width);
+            padding: 1.5rem;
+        }
+
+        /* Header */
+        .header {
+            background: white;
+            padding: 1rem 1.5rem;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            margin-bottom: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .header-title h1 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--dark);
+        }
+
+        .header-title p {
+            color: var(--secondary);
+            font-size: 0.9rem;
+        }
+        
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+        
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+        }
+
+        /* Card Styles */
+        .card {
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            margin-bottom: 1.5rem;
+        }
+        
+        .card-header {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-header h2 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--dark);
+        }
+        
+        .card-body {
+            padding: 1.5rem;
+        }
+        
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.6rem 1.2rem;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+            border: none;
+            font-size: 0.9rem;
+        }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-dark); }
+        .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--secondary); }
+        .btn-outline:hover { background: var(--light); }
+
+        /* Report Specific Styles */
+        .report-actions {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        
+        .report-filters {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .form-group label {
+            margin-bottom: 0.25rem;
+            font-size: 0.85rem;
+            color: var(--secondary);
+        }
+        
+        .form-control {
+            padding: 0.6rem;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: white;
+            min-width: 200px;
+        }
+
+        /* Table Styles */
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        .report-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .report-table thead th {
+            text-align: left;
+            padding: 1rem 1.25rem;
+            background: var(--light);
+            color: var(--secondary);
+            font-weight: 600;
+            font-size: 0.9rem;
+            border-bottom: 2px solid var(--border);
+        }
+        
+        .report-table tbody tr {
+            border-bottom: 1px solid var(--border);
+        }
+
+        .report-table tbody tr:last-child {
+            border-bottom: none;
+        }
+        
+        .report-table tbody tr:hover {
+            background-color: #f8fafc;
+        }
+        
+        .report-table td {
+            padding: 1rem 1.25rem;
+            vertical-align: middle;
+            font-size: 0.9rem;
+            color: #475569;
+        }
+    </style>
+</head>
+<body>
+    <script>
+        // --- SECURITY CHECK (ADMIN ONLY) ---
+        const loggedInUser = JSON.parse(sessionStorage.getItem('loggedInUser'));
+        if (!loggedInUser) {
+            window.location.href = 'login.html';
+        } else if (loggedInUser.role !== 'admin') {
+            window.location.href = 'supervisor.html';
+        }
+    </script>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <img src="logo.png" alt="RTV Inventory Hub Logo" class="sidebar-logo">
+                <h2>RTV Inventory Hub</h2>
+            </div>
+            <nav class="sidebar-menu">
+                <a href="index.html" class="menu-item"><i class="fas fa-home"></i><span>Dashboard</span></a>
+                <a href="Inventory.html" class="menu-item"><i class="fas fa-list"></i><span>Inventory</span></a>
+                <a href="supervisor.html" class="menu-item"><i class="fas fa-user-shield"></i><span>Supervisor</span></a>
+                <a href="field_office.html" class="menu-item"><i class="fas fa-warehouse"></i><span>Field Office</span></a>
+                <a href="venn_officer.html" class="menu-item"><i class="fas fa-user-tie"></i><span>Venn Officer</span></a>
+                <a href="transfers.html" class="menu-item"><i class="fas fa-exchange-alt"></i><span>Transfers</span></a>
+                <a href="reports.html" class="menu-item active"><i class="fas fa-chart-bar"></i><span>Reports</span></a>
+                <a href="settings.html" class="menu-item"><i class="fas fa-cog"></i><span>Settings</span></a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="header">
+                <div class="header-title">
+                    <h1>Reports</h1>
+                    <p>Generate and download inventory and activity reports</p>
+                </div>
+                <div class="header-right">
+                    <div class="user-profile">
+                        <div class="avatar" id="user-avatar">A</div>
+                        <div>
+                            <div id="user-name">Admin</div>
+                            <small id="user-role">Administrator</small>
+                        </div>
+                    </div>
+                    <button class="btn btn-outline" id="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</button>
+                </div>
+            </header>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h2>Generate & Download Reports</h2>
+                </div>
+                <div class="card-body">
+                    <div class="report-actions">
+                        <button class="btn btn-primary" id="download-inventory-btn">
+                            <i class="fas fa-download"></i> Download Full Inventory (.csv)
+                        </button>
+                        <button class="btn btn-primary" id="download-logs-btn">
+                            <i class="fas fa-download"></i> Download Full Activity Log (.csv)
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2>District Inventory Summary</h2>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="report-table">
+                            <thead>
+                                <tr>
+                                    <th>District</th>
+                                    <th>Total Items</th>
+                                    <th>Supervisor(s)</th>
+                                    <th>Item Breakdown</th>
+                                </tr>
+                            </thead>
+                            <tbody id="district-report-tbody">
+                                <tr><td colspan="4" style="text-align:center;">Loading report...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h2>Detailed Movement Log</h2>
+                </div>
+                <div class="card-body">
+                    <div class="report-filters">
+                        <div class="form-group">
+                            <label for="log-search">Search by Item ID or Details</label>
+                            <input type="text" id="log-search" class="form-control" placeholder="e.g., TBL-0421 or 'deleted'">
+                        </div>
+                         <div class="form-group">
+                            <label for="log-action-filter">Filter by Action</label>
+                            <select id="log-action-filter" class="form-control">
+                                <option value="">All Actions</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                        <table class="report-table">
+                            <thead>
+                                <tr>
+                                    <th>Timestamp</th>
+                                    <th>Item ID</th>
+                                    <th>Action</th>
+                                    <th>Details</th>
+                                </tr>
+                            </thead>
+                            <tbody id="log-report-tbody">
+                                <tr><td colspan="4" style="text-align:center;">Loading logs...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+        </main>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- DATA KEYS ---
+            const INVENTORY_KEY = 'inventoryData';
+            const DISTRICTS_KEY = 'districts';
+            const SUPERVISORS_KEY = 'supervisors';
+            const LOGS_KEY = 'movementLogs';
+
+            // --- DATA ACCESS FUNCTIONS ---
+            const getInventoryData = () => JSON.parse(localStorage.getItem(INVENTORY_KEY)) || [];
+            const getDistrictData = () => JSON.parse(localStorage.getItem(DISTRICTS_KEY)) || [];
+            const getSupervisorData = () => JSON.parse(localStorage.getItem(SUPERVISORS_KEY)) || [];
+            const getMovementLogs = () => JSON.parse(localStorage.getItem(LOGS_KEY)) || [];
+
+            // --- UI SETUP ---
+            function setupUserUI() {
+                const user = JSON.parse(sessionStorage.getItem('loggedInUser'));
+                if (user) {
+                    document.getElementById('user-name').textContent = user.username;
+                    document.getElementById('user-avatar').textContent = user.username.charAt(0).toUpperCase();
+                    document.getElementById('user-role').textContent = 'Administrator';
+                }
+            }
+
+            // --- REPORT GENERATION ---
+            function generateDistrictReport() {
+                const inventory = getInventoryData();
+                const districts = getDistrictData();
+                const supervisors = getSupervisorData();
+                const tbody = document.getElementById('district-report-tbody');
+                
+                const reportData = {};
+
+                // Initialize report data structure for all known districts
+                districts.forEach(d => {
+                    reportData[d.toLowerCase()] = {
+                        name: d,
+                        totalItems: 0,
+                        supervisors: supervisors.filter(s => s.district === d).map(s => s.name).join(', ') || 'N/A',
+                        breakdown: {}
+                    };
+                });
+
+                // Populate with inventory data
+                inventory.forEach(item => {
+                    if (item.district && reportData[item.district.toLowerCase()]) {
+                        const districtReport = reportData[item.district.toLowerCase()];
+                        districtReport.totalItems++;
+                        districtReport.breakdown[item.type] = (districtReport.breakdown[item.type] || 0) + 1;
+                    }
+                });
+                
+                tbody.innerHTML = '';
+                if (Object.keys(reportData).length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No district data found.</td></tr>';
+                    return;
+                }
+
+                Object.values(reportData).sort((a,b) => b.totalItems - a.totalItems).forEach(data => {
+                    const breakdownText = Object.entries(data.breakdown)
+                        .map(([type, count]) => `${type}: ${count}`)
+                        .join(' | ') || 'No items';
+                    
+                    const row = `
+                        <tr>
+                            <td>${data.name}</td>
+                            <td>${data.totalItems}</td>
+                            <td>${data.supervisors}</td>
+                            <td>${breakdownText}</td>
+                        </tr>
+                    `;
+                    tbody.innerHTML += row;
+                });
+            }
+            
+            function generateMovementLogReport() {
+                const logs = getMovementLogs();
+                const tbody = document.getElementById('log-report-tbody');
+                const searchFilter = document.getElementById('log-search').value.toLowerCase();
+                const actionFilter = document.getElementById('log-action-filter').value;
+
+                const filteredLogs = logs.filter(log => {
+                    const matchesSearch = log.itemId.toLowerCase().includes(searchFilter) || log.details.toLowerCase().includes(searchFilter);
+                    const matchesAction = !actionFilter || log.action === actionFilter;
+                    return matchesSearch && matchesAction;
+                });
+                
+                tbody.innerHTML = '';
+                if (filteredLogs.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No matching logs found.</td></tr>';
+                    return;
+                }
+
+                filteredLogs.slice(0, 200).forEach(log => { // Limit to 200 for performance
+                    const row = `
+                        <tr>
+                            <td>${new Date(log.timestamp).toLocaleString()}</td>
+                            <td>${log.itemId}</td>
+                            <td>${log.action}</td>
+                            <td>${log.details}</td>
+                        </tr>
+                    `;
+                    tbody.innerHTML += row;
+                });
+            }
+
+            function populateLogFilters() {
+                const logs = getMovementLogs();
+                const actions = [...new Set(logs.map(log => log.action))].sort();
+                const select = document.getElementById('log-action-filter');
+                actions.forEach(action => {
+                    select.add(new Option(action, action));
+                });
+            }
+
+            // --- CSV DOWNLOAD HELPER ---
+            function downloadCSV(data, filename = 'report.csv') {
+                if (!data || data.length === 0) {
+                    alert('No data available to download.');
+                    return;
+                }
+                const replacer = (key, value) => value === null ? '' : value;
+                const header = Object.keys(data[0]);
+                let csv = data.map(row => header.map(fieldName => JSON.stringify(row[fieldName], replacer)).join(','));
+                csv.unshift(header.join(','));
+                csv = csv.join('\r\n');
+
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                if (link.download !== undefined) {
+                    const url = URL.createObjectURL(blob);
+                    link.setAttribute('href', url);
+                    link.setAttribute('download', filename);
+                    link.style.visibility = 'hidden';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                }
+            }
+
+            // --- EVENT LISTENERS ---
+            function setupEventListeners() {
+                document.getElementById('logout-btn').addEventListener('click', () => {
+                    sessionStorage.removeItem('loggedInUser');
+                    window.location.href = 'login.html';
+                });
+
+                document.getElementById('download-inventory-btn').addEventListener('click', () => {
+                    const inventory = getInventoryData();
+                    downloadCSV(inventory, 'full_inventory_report.csv');
+                });
+
+                document.getElementById('download-logs-btn').addEventListener('click', () => {
+                    const logs = getMovementLogs();
+                    downloadCSV(logs, 'full_activity_log.csv');
+                });
+                
+                document.getElementById('log-search').addEventListener('input', generateMovementLogReport);
+                document.getElementById('log-action-filter').addEventListener('change', generateMovementLogReport);
+                
+                // Refresh reports if data changes in another tab
+                window.addEventListener('storage', () => {
+                    generateDistrictReport();
+                    generateMovementLogReport();
+                });
+            }
+
+            // --- INITIALIZATION ---
+            function initializeApp() {
+                setupUserUI();
+                setupEventListeners();
+                generateDistrictReport();
+                populateLogFilters();
+                generateMovementLogReport();
+            }
+            
+            initializeApp();
+        });
+    </script>
+</body>
+</html>

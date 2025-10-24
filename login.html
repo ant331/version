@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RTV Inventory Hub | Login</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --secondary: #64748b;
+            --light: #f8fafc;
+            --dark: #1e293b;
+            --border: #e2e8f0;
+            --border-radius: 12px;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --transition: all 0.3s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f1f5f9;
+            color: #334155;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        .login-container {
+            width: 100%;
+            max-width: 420px;
+            padding: 2.5rem;
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            text-align: center;
+        }
+
+        .login-logo {
+            width: 100px;
+            height: 100px;
+            object-fit: contain;
+            margin: 0 auto 1rem;
+        }
+
+        .login-container h1 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--dark);
+            margin-bottom: 0.5rem;
+        }
+
+        .login-container p {
+            color: var(--secondary);
+            margin-bottom: 2rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.85rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: var(--transition);
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.85rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+            border: none;
+            font-size: 1rem;
+            width: 100%;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+        
+        .error-message {
+            background-color: #fee2e2;
+            color: #b91c1c;
+            padding: 0.75rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            display: none; /* Hidden by default */
+            text-align: center;
+            font-size: 0.9rem;
+        }
+        
+        /* --- NEW FORGOT PASSWORD STYLES --- */
+        .form-options {
+            text-align: right;
+            margin-top: -1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        #forgot-password-link {
+            font-size: 0.85rem;
+            color: var(--secondary);
+            text-decoration: none;
+        }
+
+        #forgot-password-link:hover {
+            color: var(--primary);
+            text-decoration: underline;
+        }
+        /* --- END NEW STYLES --- */
+
+    </style>
+</head>
+<body>
+    <script>
+        // --- AUTO-REDIRECT IF ALREADY LOGGED IN ---
+        // MOVED TO TOP of <body> to run before rendering the form
+        const loggedInUser = JSON.parse(sessionStorage.getItem('loggedInUser'));
+        if (loggedInUser) {
+            const roleRedirects = {
+                'admin': 'index.html',
+                'supervisor': 'supervisor.html',
+                'field_officer': 'field_office.html'
+            };
+            window.location.href = roleRedirects[loggedInUser.role] || 'login.html';
+        }
+    </script>
+    <div class="login-container">
+        <img src="black.png" alt="RTV Inventory Hub Logo" class="login-logo">
+        <h1>Welcome Back</h1>
+        <p>Login to the RTV Inventory Hub</p>
+
+        <div id="error-message" class="error-message"></div>
+
+        <form id="login-form">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" class="form-control" placeholder="Enter username" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" class="form-control" required>
+            </div>
+            
+            <div class="form-options">
+                <a href="#" id="forgot-password-link">Forgot Password?</a>
+            </div>
+            
+            <button type="submit" class="btn btn-primary">Login</button>
+        </form>
+    </div>
+
+    <script>
+        // --- REMOVED 'DOMContentLoaded' WRAPPER ---
+        // This code now runs immediately, after the HTML above has been parsed.
+        
+        // --- DATA SEEDING FOR FIRST-TIME USE ---
+        function initializeDefaultData() {
+            const init = (key, data) => !localStorage.getItem(key) && localStorage.setItem(key, JSON.stringify(data));
+            
+            init('districts', ["Kagadi", "Kibaale", "Kyenjojo", "Kyegegwa", "Mbarara"]);
+            init('supervisors', [{ id: 1, name: 'Default Supervisor', username: 'kagadi', district: 'Kagadi', status: 'active', password: '12345678' }]);
+            init('fieldOfficers', [{ id: 2, name: 'Default Field Officer', username: 'kyenjojo', district: 'Kyenjojo', status: 'active', password: 'rtvfield' }]);
+            
+            // --- ADMIN ACCOUNTS INITIALIZATION (Updated) ---
+            const adminCredsKey = 'adminCredentials';
+            const adminCreds = localStorage.getItem(adminCredsKey);
+            if (!adminCreds) {
+                init(adminCredsKey, [{ id: 1, username: 'admin', password: 'admin123', isPrimary: true }]);
+            } else {
+                try {
+                    const parsed = JSON.parse(adminCreds);
+                    if (!Array.isArray(parsed)) {
+                        // Convert old object format to new array format
+                        init(adminCredsKey, [{ id: 1, username: parsed.username || 'admin', password: parsed.password || 'admin123', isPrimary: true }]);
+                    }
+                } catch (e) {
+                     init(adminCredsKey, [{ id: 1, username: 'admin', password: 'admin123', isPrimary: true }]);
+                }
+            }
+            
+            init('adminNotifications', []); // Ensure notifications array exists
+        }
+        initializeDefaultData();
+
+        // --- DOM ELEMENT REFERENCES ---
+        const loginForm = document.getElementById('login-form');
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+        const errorMessage = document.getElementById('error-message');
+        const forgotPasswordLink = document.getElementById('forgot-password-link');
+        
+        // --- LOGIN FORM SUBMISSION HANDLER ---
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            errorMessage.style.display = 'none';
+            
+            const username = usernameInput.value.trim().toLowerCase();
+            const password = passwordInput.value;
+
+            // --- AUTHENTICATION LOGIC ---
+            
+            // 1. Check for Admin (Updated)
+            const adminAccounts = JSON.parse(localStorage.getItem('adminCredentials')) || [];
+            const adminUser = adminAccounts.find(a => a.username === username && a.password === password);
+            if (adminUser) {
+                loginSuccess({ username: adminUser.username, role: 'admin' }, 'index.html');
+                return;
+            }
+
+            // 2. Check for Supervisor
+            const supervisors = JSON.parse(localStorage.getItem('supervisors')) || [];
+            const supervisorUser = supervisors.find(s => 
+                s.username === username &&
+                s.password === password &&
+                s.status === 'active'
+            );
+            if (supervisorUser) {
+                loginSuccess({ username: supervisorUser.name, role: 'supervisor', district: supervisorUser.district }, 'supervisor.html');
+                return;
+            }
+            
+            // 3. Check for Field Officer
+            const fieldOfficers = JSON.parse(localStorage.getItem('fieldOfficers')) || [];
+            const fieldOfficerUser = fieldOfficers.find(fo =>
+                fo.username === username &&
+                fo.password === password &&
+                fo.status === 'active'
+            );
+            if (fieldOfficerUser) {
+                loginSuccess({ username: fieldOfficerUser.name, role: 'field_officer', district: fieldOfficerUser.district }, 'field_office.html');
+                return;
+            }
+
+            // 4. If no user found
+            showError('Invalid credentials or inactive account. Please try again.');
+        });
+
+        // --- NEW: FORGOT PASSWORD CLICK HANDLER ---
+        forgotPasswordLink.addEventListener('click', (e) => {
+            e.preventDefault();
+
+            const username = prompt("Please enter your username to request a password reset:");
+
+            if (username && username.trim() !== '') {
+                const notifications = JSON.parse(localStorage.getItem('adminNotifications')) || [];
+                
+                const newNotification = {
+                    id: `notif-reset-${Date.now()}`,
+                    message: `Password reset requested for user: <strong>${username.trim()}</strong>. Please contact them to resolve.`,
+                    timestamp: new Date().toISOString(),
+                    read: false,
+                    type: 'password_reset', // Custom type for this event
+                    itemId: username.trim() // Storing username for context
+                };
+
+                notifications.unshift(newNotification);
+                localStorage.setItem('adminNotifications', JSON.stringify(notifications));
+
+                alert('A password reset request has been sent to the administrator. They will contact you to resolve the issue.');
+            } else if (username !== null) { // User clicked OK but left it empty
+                alert('Username cannot be empty.');
+            }
+        });
+        
+        // --- HELPER FUNCTIONS ---
+        function loginSuccess(userData, redirectUrl) {
+            sessionStorage.setItem('loggedInUser', JSON.stringify(userData));
+            window.location.href = redirectUrl;
+        }
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
