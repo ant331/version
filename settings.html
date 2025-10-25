@@ -217,6 +217,10 @@
         .badge-success { color: #065f46; background-color: #d1fae5; }
         .badge-warning { color: #92400e; background-color: #fef3c7; }
         .district-badge { background-color: #e0e7ff; color: #3730a3; text-transform: capitalize; }
+        .country-badge { background-color: #d1fae5; color: #065f46; margin-left: 8px; font-weight: 500; }
+        .country-badge-drc { background-color: #dbeafe; color: #1e40af; }
+        .country-badge-rwanda { background-color: #fee2e2; color: #991b1b; }
+
 
         /* Alert Messages */
         .alert { padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1rem; display: none; }
@@ -370,7 +374,7 @@
                     <div class="card-body">
                          <div class="table-controls">
                             <div class="search-container">
-                                <input type="text" class="search-input" placeholder="Search field officers..." id="fieldOfficerSearchInput">
+                                <input type="text" class="search-input" placeholder="Search Field officers..." id="fieldOfficerSearchInput">
                                 <i class="fas fa-search search-icon"></i>
                             </div>
                             <div class="table-actions-buttons">
@@ -497,13 +501,25 @@
                         <div id="districtAlert" class="alert"></div>
                         <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
                             <table class="data-table">
-                                <thead><tr><th>District Name</th><th>Users Assigned</th><th>Action</th></tr></thead>
+                                <thead>
+                                    <tr>
+                                        <th>District Name</th>
+                                        <th>Country</th>
+                                        <th>Users Assigned</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
                                 <tbody id="districtsTableBody"></tbody>
                             </table>
                         </div>
-                        <form id="addDistrictForm" style="margin-top: 1.5rem; display: flex; gap: 1rem;">
-                            <input type="text" id="newDistrictName" class="form-control" placeholder="Enter new district name" required>
-                            <button type="submit" class="btn btn-primary">Add District</button>
+                        <form id="addDistrictForm" style="margin-top: 1.5rem; display: flex; gap: 1rem; align-items: center;">
+                            <input type="text" id="newDistrictName" class="form-control" placeholder="Enter new district name" required style="flex-grow: 1;">
+                            <select id="newDistrictCountry" class="form-control" required style="flex-grow: 0.5;">
+                                <option value="Uganda">Uganda</option>
+                                <option value="DRC">DRC</option>
+                                <option value="Rwanda">Rwanda</option>
+                            </select>
+                            <button type="submit" class="btn btn-primary" style="flex-grow: 0.5;">Add District</button>
                         </form>
                     </div>
                 </div>
@@ -578,6 +594,7 @@
             </div>
         </div>
     </div>
+    
     <div class="modal" id="fieldOfficerModal">
         <div class="modal-content">
             <div class="modal-header">
@@ -638,6 +655,7 @@
             </div>
         </div>
     </div>
+
     <div class="modal" id="dataCollectorModal">
         <div class="modal-content">
             <div class="modal-header">
@@ -756,14 +774,15 @@
             
             // --- LOCAL STORAGE KEYS ---
             const SUPERVISORS_KEY = 'supervisors';
-            const FIELDOFFICERS_KEY = 'fieldOfficers';
+            // UPDATED: This key now explicitly maps to Field Officers
+            const FIELDOFFICERS_KEY = 'fieldOfficers'; 
             const DATACOLLECTORS_KEY = 'dataCollectors';
             const DISTRICTS_KEY = 'districts';
-            const ADMIN_ACCOUNTS_KEY = 'adminCredentials'; // Renamed, but keeping key for compatibility. Updated logic to treat as array.
+            const ADMIN_ACCOUNTS_KEY = 'adminCredentials';
 
             // --- BULK SELECTION STATE ---
             let selectedSupervisors = new Set();
-            let selectedFieldOfficers = new Set();
+            let selectedFieldOfficers = new Set(); // UPDATED
             let selectedDataCollectors = new Set();
 
             // --- DATA HELPERS ---
@@ -774,18 +793,44 @@
             function initializeApp() {
                 const initData = (key, defaultData) => !localStorage.getItem(key) && localStorage.setItem(key, JSON.stringify(defaultData()));
                 
-                initData(DISTRICTS_KEY, () => ["Amuru", "Gulu", "Isingiro", "Kabale", "Kagadi", "Kaliro", "Kamwengye", "Kanungu", "Kibaale", "Kiryandongo", "Kisoro", "Kyegegwa", "Kyenjojo", "Luuka", "Mbarara", "Mitooma", "Nwoya", "Rubanda", "Rubirizi", "Rukiga", "Rukungiri"].sort());
+                // --- NEW: District Data Migration ---
+                let districts = getData(DISTRICTS_KEY);
+                if (districts.length > 0 && typeof districts[0] === 'string') {
+                    // This is the old string array format, migrate it to object format
+                    const defaultUgandaDistricts = ["Amuru", "Gulu", "Isingiro", "Kabale", "Kagadi", "Kaliro", "Kamwengye", "Kanungu", "Kibaale", "Kiryandongo", "Kisoro", "Kyegegwa", "Kyenjojo", "Luuka", "Mbarara", "Mitooma", "Nwoya", "Rubanda", "Rubirizi", "Rukiga", "Rukungiri"];
+                    const migratedDistricts = districts.map(d => ({ 
+                        name: d, 
+                        country: defaultUgandaDistricts.includes(d) ? 'Uganda' : 'Uganda' // Default all existing to Uganda
+                    }));
+                    saveData(DISTRICTS_KEY, migratedDistricts.sort((a, b) => a.name.localeCompare(b.name)));
+                } else if (districts.length === 0) {
+                    // If it's completely empty, seed with new format
+                    const defaultDistricts = [
+                        { name: "Amuru", country: "Uganda" }, { name: "Gulu", country: "Uganda" },
+                        { name: "Isingiro", country: "Uganda" }, { name: "Kabale", country: "Uganda" },
+                        { name: "Kagadi", country: "Uganda" }, { name: "Kaliro", country: "Uganda" },
+                        { name: "Kamwengye", country: "Uganda" }, { name: "Kanungu", country: "Uganda" },
+                        { name: "Kibaale", country: "Uganda" }, { name: "Kiryandongo", country: "Uganda" },
+                        { name: "Kisoro", country: "Uganda" }, { name: "Kyegegwa", country: "Uganda" },
+                        { name: "Kyenjojo", country: "Uganda" }, { name: "Luuka", country: "Uganda" },
+                        { name: "Mbarara", country: "Uganda" }, { name: "Mitooma", country: "Uganda" },
+                        { name: "Nwoya", country: "Uganda" }, { name: "Rubanda", country: "Uganda" },
+                        { name: "Rubirizi", country: "Uganda" }, { name: "Rukiga", country: "Uganda" },
+                        { name: "Rukungiri", country: "Uganda" }
+                    ].sort((a, b) => a.name.localeCompare(b.name));
+                    saveData(DISTRICTS_KEY, defaultDistricts);
+                }
+
                 initData(SUPERVISORS_KEY, () => [{ id: Date.now(), name: 'Default Supervisor', empId: 'SUP-001', email: 'sup.kagadi@rtv.org', phone: '0700123456', username: 'sup_kagadi', password: 'password123', district: 'Kagadi', status: 'active' }]);
+                // UPDATED: Key variable name
                 initData(FIELDOFFICERS_KEY, () => [{ id: Date.now() + 1, name: 'Default Field Officer', empId: 'FO-001', email: 'fo.kyenjojo@rtv.org', phone: '0700654321', username: 'fo_kyenjojo', password: 'password123', district: 'Kyenjojo', status: 'active' }]);
                 initData(DATACOLLECTORS_KEY, () => [{ id: Date.now() + 2, name: 'Natuha Eve', empId: 'EM132', email: 'natuha@gmail.com', phone: '0700987654', district: 'Kagadi'}]);
                 
-                // --- ADMIN ACCOUNTS INITIALIZATION (Updated) ---
+                // Admin Accounts Initialization (Updated)
                 const adminCreds = localStorage.getItem(ADMIN_ACCOUNTS_KEY);
                 if (!adminCreds) {
-                    // Initialize as an array with the primary admin
                     localStorage.setItem(ADMIN_ACCOUNTS_KEY, JSON.stringify([{ id: 1, username: 'admin', password: 'admin123', isPrimary: true }]));
                 } else {
-                    // If it's the old object format, convert it to the new array format
                     try {
                         const parsed = JSON.parse(adminCreds);
                         if (!Array.isArray(parsed)) {
@@ -798,7 +843,7 @@
 
                 populateDistrictDropdowns();
                 renderSupervisorsTable();
-                renderFieldOfficersTable();
+                renderFieldOfficersTable(); // UPDATED
                 renderDataCollectorsTable();
                 renderDistrictsTable();
                 renderAdminsTable();
@@ -837,6 +882,7 @@
                 updateBulkActionUI('supervisor');
             }
 
+            // UPDATED: Renamed function and all internal IDs/classes
             function renderFieldOfficersTable() {
                 const officers = getData(FIELDOFFICERS_KEY);
                 const tableBody = document.getElementById('fieldOfficersTableBody');
@@ -864,7 +910,7 @@
                             <button class="btn btn-sm btn-danger delete-fieldOfficer-btn">Delete</button>
                         </td>
                     </tr>
-                `}).join('') || `<tr><td colspan="6" style="text-align: center;">No field officers found.</td></tr>`;
+                `}).join('') || `<tr><td colspan="6" style="text-align: center;">No Field officers found.</td></tr>`;
                 updateBulkActionUI('fieldOfficer');
             }
 
@@ -915,31 +961,40 @@
                 `).join('') || `<tr><td colspan="3" style="text-align: center;">No admin accounts found.</td></tr>`;
             }
 
+            // UPDATED: To show country
             function renderDistrictsTable() {
-                const districts = getData(DISTRICTS_KEY).sort();
+                const districts = getData(DISTRICTS_KEY).sort((a, b) => a.name.localeCompare(b.name));
                 const supervisors = getData(SUPERVISORS_KEY);
-                const officers = getData(FIELDOFFICERS_KEY);
+                const officers = getData(FIELDOFFICERS_KEY); // UPDATED
                 const tableBody = document.getElementById('districtsTableBody');
                 
                 tableBody.innerHTML = districts.map(d => {
-                    const userCount = [...supervisors, ...officers].filter(u => u.district === d).length;
+                    const userCount = [...supervisors, ...officers].filter(u => u.district === d.name).length;
+                    let countryBadgeClass = 'country-badge';
+                    if (d.country === 'DRC') countryBadgeClass = 'country-badge-drc';
+                    if (d.country === 'Rwanda') countryBadgeClass = 'country-badge-rwanda';
+                    
                     return `
-                        <tr data-name="${d}">
-                            <td>${d}</td>
+                        <tr data-name="${d.name}">
+                            <td>${d.name}</td>
+                            <td><span class="badge ${countryBadgeClass}">${d.country}</span></td>
                             <td>${userCount} user(s)</td>
                             <td class="table-actions">
                                 <button class="btn btn-sm btn-danger delete-district-btn" ${userCount > 0 ? 'disabled title="Cannot delete district with assigned users"' : ''}>Delete</button>
                             </td>
                         </tr>`;
-                }).join('') || `<tr><td colspan="3" style="text-align: center;">No districts found.</td></tr>`;
+                }).join('') || `<tr><td colspan="4" style="text-align: center;">No districts found.</td></tr>`;
             }
             
+            // UPDATED: To show country in dropdown
             function populateDistrictDropdowns() {
-                const districts = getData(DISTRICTS_KEY).sort();
-                const optionsHTML = '<option value="">Select District</option>' + districts.map(d => `<option value="${d}">${d}</option>`).join('');
+                const districts = getData(DISTRICTS_KEY).sort((a, b) => a.name.localeCompare(b.name));
+                const optionsHTML = '<option value="">Select District</option>' + districts.map(d => 
+                    `<option value="${d.name}">${d.name} (${d.country})</option>`
+                ).join('');
                 document.getElementById('supervisorDistrict').innerHTML = optionsHTML;
-                document.getElementById('fieldOfficerDistrict').innerHTML = optionsHTML;
-                document.getElementById('dataCollectorDistrict').innerHTML = optionsHTML; // Added
+                document.getElementById('fieldOfficerDistrict').innerHTML = optionsHTML; // UPDATED
+                document.getElementById('dataCollectorDistrict').innerHTML = optionsHTML;
             }
 
             function setupEventListeners() {
@@ -959,7 +1014,7 @@
                 document.getElementById('selectAllSupervisors').addEventListener('change', (e) => handleSelectAll(e, 'supervisor'));
                 document.getElementById('bulkDeleteSupervisorsBtn').addEventListener('click', () => handleBulkDelete('supervisor'));
 
-                // Field Officers
+                // Field Officers (UPDATED)
                 document.getElementById('addFieldOfficerBtn').addEventListener('click', () => openUserModal('fieldOfficer'));
                 document.getElementById('fieldOfficerForm').addEventListener('submit', (e) => handleSaveUser(e, 'fieldOfficer'));
                 document.getElementById('fieldOfficersTableBody').addEventListener('click', (e) => handleTableAction(e, 'fieldOfficer'));
@@ -1006,6 +1061,7 @@
             }
             
             // --- MODAL & FORM HANDLERS ---
+            // UPDATED: 'userType' now accepts 'supervisor' or 'fieldOfficer'
             function openUserModal(userType, id = null) {
                 const modalId = `${userType}Modal`;
                 const form = document.getElementById(`${userType}Form`);
@@ -1061,7 +1117,7 @@
                     document.getElementById('dataCollectorEmpId').value = collector.empId;
                     document.getElementById('dataCollectorPhone').value = collector.phone;
                     document.getElementById('dataCollectorEmail').value = collector.email;
-                    document.getElementById('dataCollectorDistrict').value = collector.district; // Added
+                    document.getElementById('dataCollectorDistrict').value = collector.district;
                 } else {
                     modalTitle.textContent = 'Add Data Collector';
                     document.getElementById('dataCollectorId').value = '';
@@ -1076,9 +1132,9 @@
                 const empId = document.getElementById('dataCollectorEmpId').value.trim();
                 const phone = document.getElementById('dataCollectorPhone').value.trim();
                 const email = document.getElementById('dataCollectorEmail').value.trim().toLowerCase();
-                const district = document.getElementById('dataCollectorDistrict').value; // Added
+                const district = document.getElementById('dataCollectorDistrict').value;
                 
-                if (!name || !empId || !phone || !district) { // Added district validation
+                if (!name || !empId || !phone || !district) {
                     return showAlert('dataCollectorAlert', 'error', 'Please fill all required fields (Name, EM_No, Phone, District).');
                 }
 
@@ -1087,7 +1143,7 @@
                     return showAlert('dataCollectorAlert', 'error', `EM_No '${empId}' is already in use.`);
                 }
                 
-                const collectorObject = { name, empId, phone, email, district }; // Added district
+                const collectorObject = { name, empId, phone, email, district };
 
                 if (id) { // Editing
                     const index = collectors.findIndex(c => c.id == id);
@@ -1124,6 +1180,40 @@
                 }
             }
 
+            // NEW: Helper function to open email client
+            function sendWelcomeEmail(email, name, username, password, userType) {
+                if (!email || !password) return; // Don't try if no email or password
+
+                const subject = "Welcome to RTV Inventory Hub - Your Account Details";
+                const body = `Hello ${name},
+    
+Your account for the RTV Inventory Hub has been created.
+    
+Your login details are:
+Username: ${username}
+Password: ${password}
+    
+Please log in and keep these details safe.
+    
+Thanks,
+RTV Admin`;
+                
+                const encodedSubject = encodeURIComponent(subject);
+                const encodedBody = encodeURIComponent(body);
+                
+                // Show a specific alert
+                const alertId = userType === 'supervisor' ? 'supervisorAlert' : 'fieldOfficerAlert';
+                showAlert(
+                    alertId, 
+                    'success', 
+                    `User saved. Now attempting to open your email client to send login details to ${email}.`
+                );
+                
+                // Open the user's default email client in a new tab
+                window.open(`mailto:${email}?subject=${encodedSubject}&body=${encodedBody}`, '_blank');
+            }
+
+            // UPDATED: To handle 'fieldOfficer' and call sendWelcomeEmail
             function handleSaveUser(e, userType) {
                 e.preventDefault();
                 const isSupervisor = userType === 'supervisor';
@@ -1149,6 +1239,8 @@
                 let data = getData(dataKey);
                 const userObject = { name, empId, email, phone, username, district, status };
                 
+                let userWasNew = false;
+
                 if (id) {
                     const index = data.findIndex(u => u.id == id);
                     if (index > -1) {
@@ -1158,15 +1250,23 @@
                 } else {
                     if (!password) return showAlert(alertId, 'error', 'Password is required for new users.');
                     data.unshift({ id: Date.now(), ...userObject, password });
+                    userWasNew = true;
                 }
                 
                 saveData(dataKey, data);
                 isSupervisor ? renderSupervisorsTable() : renderFieldOfficersTable();
                 renderDistrictsTable();
                 document.getElementById(`${userType}Modal`).style.display = 'none';
-                showAlert(alertId, 'success', `${isSupervisor ? 'Supervisor' : 'Field Officer'} saved successfully.`);
+
+                // NEW: Send email logic
+                if (userWasNew && password) {
+                    sendWelcomeEmail(email, name, username, password, userType);
+                } else {
+                    showAlert(alertId, 'success', `${isSupervisor ? 'Supervisor' : 'Field Officer'} saved successfully.`);
+                }
             }
             
+            // UPDATED: To handle 'fieldOfficer'
             function handleTableAction(e, userType) {
                 if (e.target.matches(`.${userType}-checkbox`)) {
                     handleCheckboxClick(e.target, userType);
@@ -1244,6 +1344,7 @@
                 updateBulkActionUI(userType);
             }
 
+            // UPDATED: To handle 'fieldOfficer'
             function handleBulkDelete(userType) {
                 const selectedSet = getSelectedSet(userType);
                 const count = selectedSet.size;
@@ -1251,7 +1352,7 @@
 
                 const userTypeName = userType === 'dataCollector' ? 'data collector(s)' : `${userType}(s)`;
                 if (confirm(`Are you sure you want to delete ${count} ${userTypeName}? This cannot be undone.`)) {
-                    const dataKey = `${userType}s`; // e.g., 'supervisors'
+                    const dataKey = userType === 'fieldOfficer' ? FIELDOFFICERS_KEY : `${userType}s`;
                     let data = getData(dataKey);
                     data = data.filter(item => !selectedSet.has(String(item.id)));
                     saveData(dataKey, data);
@@ -1267,6 +1368,7 @@
                 }
             }
 
+            // UPDATED: To handle 'fieldOfficer'
             function getSelectedSet(userType) {
                 if (userType === 'supervisor') return selectedSupervisors;
                 if (userType === 'fieldOfficer') return selectedFieldOfficers;
@@ -1274,42 +1376,52 @@
                 return new Set();
             }
 
+            // UPDATED: To handle 'fieldOfficer'
             function updateBulkActionUI(userType) {
                 const selectedSet = getSelectedSet(userType);
-                const btn = document.getElementById(`bulkDelete${userType.charAt(0).toUpperCase() + userType.slice(1)}sBtn`);
-                const selectAllCheckbox = document.getElementById(`selectAll${userType.charAt(0).toUpperCase() + userType.slice(1)}s`);
+                const btnId = `bulkDelete${userType.charAt(0).toUpperCase() + userType.slice(1)}sBtn`;
+                const btn = document.getElementById(btnId);
+                const selectAllCheckboxId = `selectAll${userType.charAt(0).toUpperCase() + userType.slice(1)}s`;
+                const selectAllCheckbox = document.getElementById(selectAllCheckboxId);
                 const tableBody = document.getElementById(`${userType}sTableBody`);
                 
-                if (selectedSet.size > 0) {
-                    btn.style.display = 'inline-flex';
-                    btn.textContent = `Delete Selected (${selectedSet.size})`;
-                } else {
-                    btn.style.display = 'none';
+                if (btn) {
+                    if (selectedSet.size > 0) {
+                        btn.style.display = 'inline-flex';
+                        btn.textContent = `Delete Selected (${selectedSet.size})`;
+                    } else {
+                        btn.style.display = 'none';
+                    }
                 }
 
                 // Update "Select All" checkbox state
-                const visibleCheckboxes = tableBody.querySelectorAll(`.${userType}-checkbox`);
-                if (visibleCheckboxes.length > 0) {
-                    selectAllCheckbox.checked = Array.from(visibleCheckboxes).every(cb => cb.checked);
-                } else {
-                    selectAllCheckbox.checked = false;
+                if(selectAllCheckbox && tableBody) {
+                    const visibleCheckboxes = tableBody.querySelectorAll(`.${userType}-checkbox`);
+                    if (visibleCheckboxes.length > 0) {
+                        selectAllCheckbox.checked = Array.from(visibleCheckboxes).every(cb => cb.checked);
+                    } else {
+                        selectAllCheckbox.checked = false;
+                    }
                 }
             }
             
             // --- SYSTEM & ADMIN HANDLERS ---
+            // UPDATED: To handle country
             function handleAddDistrict(e) {
                 e.preventDefault();
                 const input = document.getElementById('newDistrictName');
-                const newDistrict = input.value.trim();
-                if (!newDistrict) return;
+                const newDistrictName = input.value.trim();
+                const newDistrictCountry = document.getElementById('newDistrictCountry').value;
+                
+                if (!newDistrictName || !newDistrictCountry) return;
 
                 let districts = getData(DISTRICTS_KEY);
-                if (districts.some(d => d.toLowerCase() === newDistrict.toLowerCase())) {
+                if (districts.some(d => d.name.toLowerCase() === newDistrictName.toLowerCase())) {
                     return showAlert('districtAlert', 'error', 'District already exists.');
                 }
                 
-                districts.push(newDistrict);
-                saveData(DISTRICTS_KEY, districts.sort());
+                districts.push({ name: newDistrictName, country: newDistrictCountry });
+                saveData(DISTRICTS_KEY, districts.sort((a, b) => a.name.localeCompare(b.name)));
                 renderDistrictsTable();
                 populateDistrictDropdowns();
                 showAlert('districtAlert', 'success', 'District added successfully.');
@@ -1322,7 +1434,7 @@
                 const districtName = btn.closest('tr').dataset.name;
                 
                 const deleteCallback = () => {
-                    saveData(DISTRICTS_KEY, getData(DISTRICTS_KEY).filter(d => d !== districtName));
+                    saveData(DISTRICTS_KEY, getData(DISTRICTS_KEY).filter(d => d.name !== districtName));
                     renderDistrictsTable();
                     populateDistrictDropdowns();
                     showAlert('districtAlert', 'success', 'District deleted successfully.');
@@ -1472,9 +1584,9 @@
                         const name = getVal(['Name', 'name']);
                         const contact = getVal(['Contact', 'contact', 'Phone']);
                         const email = getVal(['Email', 'email']);
-                        const district = getVal(['District', 'district']); // Added
+                        const district = getVal(['District', 'district']);
 
-                        if (!empId || !name || !contact || !district) { // Added district
+                        if (!empId || !name || !contact || !district) {
                             skippedCount++;
                             return;
                         }
@@ -1484,7 +1596,7 @@
                             return;
                         }
 
-                        collectors.unshift({ id: Date.now() + addedCount, empId, name, phone: contact, email, district }); // Added district
+                        collectors.unshift({ id: Date.now() + addedCount, empId, name, phone: contact, email, district });
                         existingEmpIds.add(empId.toLowerCase());
                         addedCount++;
                     });
