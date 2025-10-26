@@ -653,7 +653,7 @@
                             <input type="text" class="form-control" id="fieldOfficerName" required>
                         </div>
                         <div class="form-group">
-                            <label for="fieldOfficerEmpId">FS ID *</label>
+                            <label for="fieldOfficerEmpId">FO ID *</label>
                             <input type="text" class="form-control" id="fieldOfficerEmpId" required>
                         </div>
                         <div class="form-group">
@@ -715,7 +715,7 @@
                             <input type="text" class="form-control" id="vennOfficerName" required>
                         </div>
                         <div class="form-group">
-                            <label for="vennOfficerEmpId">FS ID *</label>
+                            <label for="vennOfficerEmpId">ID_no *</label>
                             <input type="text" class="form-control" id="vennOfficerEmpId" required>
                         </div>
                         <div class="form-group">
@@ -777,7 +777,7 @@
                             <input type="text" class="form-control" id="dataCollectorName" required>
                         </div>
                         <div class="form-group">
-                            <label for="dataCollectorEmpId">FS ID *</label>
+                            <label for="dataCollectorEmpId">EM_NO *</label>
                             <input type="text" class="form-control" id="dataCollectorEmpId" required>
                         </div>
                         <div class="form-group">
@@ -791,17 +791,7 @@
                         <div class="form-group full-width">
                             <hr style="border: none; border-top: 1px solid var(--border); margin: 1rem 0;">
                             <h4>Login Credentials</h4>
-                        </div>
-                        <div class="form-group">
-                            <label for="dataCollectorUsername">Username *</label>
-                            <input type="text" class="form-control" id="dataCollectorUsername" required>
-                        </div>
-                        <div class="form-group password-toggle">
-                            <label for="dataCollectorPassword">Password *</label>
-                            <input type="password" class="form-control" id="dataCollectorPassword">
-                            <button type="button" class="toggle-password"><i class="fas fa-eye"></i></button>
-                            <div class="form-text">Required for new users. Leave blank to keep current password.</div>
-                        </div>
+
                         <div class="form-group">
                             <label for="dataCollectorDistrict">District *</label>
                             <select class="form-control" id="dataCollectorDistrict" required></select>
@@ -935,7 +925,7 @@
                 // --- UPDATED: Seeder for districts to be the source of truth ---
                 if (!localStorage.getItem(DISTRICT_KEY)) {
                     localStorage.setItem(DISTRICT_KEY, JSON.stringify([
-                        { id: 'D001', name: 'Kampala', country: 'Uganda' },
+                        { id: 'D001', name: 'Kibaale', country: 'Uganda' },
                         { id: 'D002', name: 'Gulu', country: 'Uganda' },
                         { id: 'D003', name: 'Kigali', country: 'Rwanda' },
                         { id: 'D004', name: 'Kinshasa', country: 'DRC' },
@@ -2164,3 +2154,4 @@
     </script>
 </body>
 </html>
+
