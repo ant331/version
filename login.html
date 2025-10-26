@@ -125,7 +125,6 @@
             font-size: 0.9rem;
         }
         
-        /* --- NEW FORGOT PASSWORD STYLES --- */
         .form-options {
             text-align: right;
             margin-top: -1rem;
@@ -142,26 +141,24 @@
             color: var(--primary);
             text-decoration: underline;
         }
-        /* --- END NEW STYLES --- */
-
     </style>
 </head>
 <body>
     <script>
         // --- AUTO-REDIRECT IF ALREADY LOGGED IN ---
-        // MOVED TO TOP of <body> to run before rendering the form
         const loggedInUser = JSON.parse(sessionStorage.getItem('loggedInUser'));
         if (loggedInUser) {
             const roleRedirects = {
                 'admin': 'index.html',
                 'supervisor': 'supervisor.html',
-                'field_officer': 'field_office.html'
+                'field_officer': 'field_office.html',
+                'venn_officer': 'venn_officer.html' // <-- ADDED
             };
             window.location.href = roleRedirects[loggedInUser.role] || 'login.html';
         }
     </script>
     <div class="login-container">
-        <img src="black.png" alt="RTV Inventory Hub Logo" class="login-logo">
+        <img src="logo.png" alt="RTV Inventory Hub Logo" class="login-logo">
         <h1>Welcome Back</h1>
         <p>Login to the RTV Inventory Hub</p>
 
@@ -186,32 +183,34 @@
     </div>
 
     <script>
-        // --- REMOVED 'DOMContentLoaded' WRAPPER ---
-        // This code now runs immediately, after the HTML above has been parsed.
-        
-        // --- DATA SEEDING FOR FIRST-TIME USE ---
+        // --- DATA SEEDING FOR FIRST-TIME USE (IMPROVED) ---
         function initializeDefaultData() {
             const init = (key, data) => !localStorage.getItem(key) && localStorage.setItem(key, JSON.stringify(data));
             
-            init('districts', ["Kagadi", "Kibaale", "Kyenjojo", "Kyegegwa", "Mbarara"]);
-            init('supervisors', [{ id: 1, name: 'Default Supervisor', username: 'kagadi', district: 'Kagadi', status: 'active', password: '12345678' }]);
-            init('fieldOfficers', [{ id: 2, name: 'Default Field Officer', username: 'kyenjojo', district: 'Kyenjojo', status: 'active', password: 'rtvfield' }]);
+            // Seed Districts
+            init('districts', ["Kampala", "Gulu", "Kigali", "Kinshasa", "Mbarara", "Kagadi", "Kyenjojo", "Kyegegwa"]);
+
+            // Seed Users (using usernames from settings.html for consistency)
+            init('supervisors', [
+                { id: 'sup-1', name: 'Supervisor A', empId: 'FS001', email: 'sup.a@rtv.com', phone: '256701000001', username: 'supervisor', password: 'password', role: 'supervisor', district: 'Kampala', status: 'active' }
+            ]);
+            init('fieldOfficers', [
+                { id: 'fo-1', name: 'Field Officer A', empId: 'FO001', email: 'fo.a@rtv.com', phone: '256702000001', username: 'field', password: 'password', role: 'field_officer', district: 'Gulu', status: 'active' }
+            ]);
+            // --- ADDED VENN OFFICER SEED ---
+            init('vennOfficers', [
+                { id: 'vo-1', name: 'Venn Officer A', empId: 'VO001', email: 'vo.a@rtv.com', phone: '256703000001', username: 'venn', password: 'password', role: 'venn_officer', district: 'Kigali', status: 'active' }
+            ]);
+            init('dataCollectors', [
+                { id: 'dc-1', name: 'Collector A', empId: 'DC001', email: 'dc.a@rtv.com', phone: '256704000001', username: 'dc_a', password: 'password', role: 'data_collector', district: 'Kampala' }
+            ]);
             
-            // --- ADMIN ACCOUNTS INITIALIZATION (Updated) ---
-            const adminCredsKey = 'adminCredentials';
-            const adminCreds = localStorage.getItem(adminCredsKey);
-            if (!adminCreds) {
-                init(adminCredsKey, [{ id: 1, username: 'admin', password: 'admin123', isPrimary: true }]);
-            } else {
-                try {
-                    const parsed = JSON.parse(adminCreds);
-                    if (!Array.isArray(parsed)) {
-                        // Convert old object format to new array format
-                        init(adminCredsKey, [{ id: 1, username: parsed.username || 'admin', password: parsed.password || 'admin123', isPrimary: true }]);
-                    }
-                } catch (e) {
-                     init(adminCredsKey, [{ id: 1, username: 'admin', password: 'admin123', isPrimary: true }]);
-                }
+            // Seed Admin Accounts (using the key from settings.html)
+            const adminKey = 'adminAccounts'; 
+            if (!localStorage.getItem(adminKey)) {
+                init(adminKey, [
+                    { id: 'adm-1', name: 'Primary Admin', username: 'admin', password: 'admin123', role: 'admin', empId: 'ADM001' }
+                ]);
             }
             
             init('adminNotifications', []); // Ensure notifications array exists
@@ -235,11 +234,11 @@
 
             // --- AUTHENTICATION LOGIC ---
             
-            // 1. Check for Admin (Updated)
-            const adminAccounts = JSON.parse(localStorage.getItem('adminCredentials')) || [];
+            // 1. Check for Admin
+            const adminAccounts = JSON.parse(localStorage.getItem('adminAccounts')) || []; // <-- CORRECTED KEY
             const adminUser = adminAccounts.find(a => a.username === username && a.password === password);
             if (adminUser) {
-                loginSuccess({ username: adminUser.username, role: 'admin' }, 'index.html');
+                loginSuccess({ username: adminUser.username, name: adminUser.name, role: 'admin' }, 'index.html');
                 return;
             }
 
@@ -267,33 +266,41 @@
                 return;
             }
 
-            // 4. If no user found
+            // --- 4. ADDED: Check for Venn Officer ---
+            const vennOfficers = JSON.parse(localStorage.getItem('vennOfficers')) || [];
+            const vennOfficerUser = vennOfficers.find(vo =>
+                vo.username === username &&
+                vo.password === password &&
+                vo.status === 'active'
+            );
+            if (vennOfficerUser) {
+                loginSuccess({ username: vennOfficerUser.name, role: 'venn_officer', district: vennOfficerUser.district }, 'venn_officer.html');
+                return;
+            }
+
+            // 5. If no user found
             showError('Invalid credentials or inactive account. Please try again.');
         });
 
-        // --- NEW: FORGOT PASSWORD CLICK HANDLER ---
+        // --- FORGOT PASSWORD CLICK HANDLER ---
         forgotPasswordLink.addEventListener('click', (e) => {
             e.preventDefault();
-
             const username = prompt("Please enter your username to request a password reset:");
 
             if (username && username.trim() !== '') {
                 const notifications = JSON.parse(localStorage.getItem('adminNotifications')) || [];
-                
                 const newNotification = {
                     id: `notif-reset-${Date.now()}`,
                     message: `Password reset requested for user: <strong>${username.trim()}</strong>. Please contact them to resolve.`,
                     timestamp: new Date().toISOString(),
                     read: false,
-                    type: 'password_reset', // Custom type for this event
-                    itemId: username.trim() // Storing username for context
+                    type: 'password_reset',
+                    itemId: username.trim()
                 };
-
                 notifications.unshift(newNotification);
                 localStorage.setItem('adminNotifications', JSON.stringify(notifications));
-
                 alert('A password reset request has been sent to the administrator. They will contact you to resolve the issue.');
-            } else if (username !== null) { // User clicked OK but left it empty
+            } else if (username !== null) {
                 alert('Username cannot be empty.');
             }
         });
