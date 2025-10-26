@@ -368,17 +368,25 @@
 </head>
 <body>
     <script>
-        // --- SECURITY CHECK ---
-        // This page is for Venn Officers (mapped to 'field_officer' role) and Admins.
-        // It redirects Supervisors away.
+        // --- UPDATED SECURITY CHECK ---
+        // This page is only for 'venn_officer' and 'admin' roles.
         const loggedInUser = JSON.parse(sessionStorage.getItem('loggedInUser'));
         if (!loggedInUser) {
+            // No user, redirect to login
             window.location.href = 'login.html';
-        } else if (loggedInUser.role === 'supervisor') {
-            // A supervisor should not be on this page.
-            window.location.href = 'supervisor.html';
+        } else if (loggedInUser.role !== 'admin' && loggedInUser.role !== 'venn_officer') {
+            // User is logged in, but is NOT an admin or a venn_officer.
+            // Redirect them to their appropriate dashboard.
+            if (loggedInUser.role === 'supervisor') {
+                 window.location.href = 'supervisor.html';
+            } else if (loggedInUser.role === 'field_officer') {
+                 window.location.href = 'field_office.html';
+            } else {
+                // Fallback for any other unknown role
+                 window.location.href = 'login.html';
+            }
         }
-        // Admins ('admin') and Venn Officers ('field_officer') are allowed.
+        // If we are here, the user is either 'admin' or 'venn_officer' and is allowed.
     </script>
     <div class="app-container">
         <aside class="sidebar">
@@ -585,8 +593,8 @@
         // Global variable to hold the data of the officer currently being viewed.
         let currentVennOfficer = null;
         
-        // Keys for localStorage
-        const FIELD_OFFICERS_KEY = 'fieldOfficers';
+        // --- UPDATED KEYS ---
+        const VENN_OFFICERS_KEY = 'vennOfficers'; // Correct key
         const SUPERVISORS_KEY = 'supervisors';
         const INVENTORY_KEY = 'inventoryData';
         const MOVEMENT_LOGS_KEY = 'movementLogs';
@@ -597,7 +605,7 @@
         });
         
         window.addEventListener('storage', (e) => {
-            if ([INVENTORY_KEY, FIELD_OFFICERS_KEY, MOVEMENT_LOGS_KEY].includes(e.key) && currentVennOfficer) {
+            if ([INVENTORY_KEY, VENN_OFFICERS_KEY, MOVEMENT_LOGS_KEY].includes(e.key) && currentVennOfficer) {
                 loadVennOfficerData();
             }
         });
@@ -615,16 +623,17 @@
                 document.getElementById('user-avatar').textContent = 'A';
                 document.getElementById('user-role').textContent = 'Administrator';
                 loadVennOfficersDropdown();
-            } else if (user.role === 'field_officer') {
-                // VENN OFFICER (FIELD OFFICER) VIEW
+            } else if (user.role === 'venn_officer') { // <-- CORRECTED ROLE CHECK
+                // VENN OFFICER VIEW
                 officerSelectorDiv.style.display = 'none';
-                const officers = getFieldOfficers();
+                const officers = getVennOfficers(); // <-- CORRECTED FUNCTION
+                // Find officer by their unique username
                 const officerDetails = officers.find(o => o.name === user.username && o.district === user.district);
                 
                 if (officerDetails) {
                     setCurrentVennOfficer(officerDetails);
                 } else {
-                    console.error("Security Alert: Logged-in officer could not be found in the database.");
+                    console.error("Security Alert: Logged-in Venn Officer could not be found in the database.");
                     document.getElementById('district-name').textContent = 'Error';
                     document.getElementById('inventory-table-body').innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 2rem; color: var(--danger);">Could not load your data. Please contact an administrator.</td></tr>';
                 }
@@ -632,7 +641,7 @@
         }
         
         // --- Data Access Functions ---
-        const getFieldOfficers = () => JSON.parse(localStorage.getItem(FIELD_OFFICERS_KEY)) || [];
+        const getVennOfficers = () => JSON.parse(localStorage.getItem(VENN_OFFICERS_KEY)) || []; // <-- CORRECTED
         const getSupervisors = () => JSON.parse(localStorage.getItem(SUPERVISORS_KEY)) || [];
         const getInventoryData = () => JSON.parse(localStorage.getItem(INVENTORY_KEY)) || [];
         const saveInventoryData = (inventory) => {
@@ -653,7 +662,7 @@
         }
 
         function loadVennOfficersDropdown() {
-            const officers = getFieldOfficers();
+            const officers = getVennOfficers(); // <-- CORRECTED
             const dropdown = document.getElementById('venn-officer-select');
             dropdown.innerHTML = '<option value="">-- Select Officer to View --</option>';
             officers.forEach(officer => {
@@ -777,7 +786,7 @@
             
             document.getElementById('venn-officer-select').addEventListener('change', (e) => {
                 const selectedId = e.target.value;
-                const selectedOfficer = selectedId ? getFieldOfficers().find(o => o.id == selectedId) : null;
+                const selectedOfficer = selectedId ? getVennOfficers().find(o => o.id == selectedId) : null; // <-- CORRECTED
                 setCurrentVennOfficer(selectedOfficer);
             });
             
