@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RTV Inventory Hub | Settings</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Third-party libraries for file parsing -->
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.0/papaparse.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
@@ -217,9 +218,12 @@
         .badge-success { color: #065f46; background-color: #d1fae5; }
         .badge-warning { color: #92400e; background-color: #fef3c7; }
         .district-badge { background-color: #e0e7ff; color: #3730a3; text-transform: capitalize; }
-        .country-badge { background-color: #d1fae5; color: #065f46; margin-left: 8px; font-weight: 500; }
-        .country-badge-drc { background-color: #dbeafe; color: #1e40af; }
-        .country-badge-rwanda { background-color: #fee2e2; color: #991b1b; }
+        
+        /* UPDATED: Added specific country badge styles */
+        .country-badge { margin-left: 8px; font-weight: 500; }
+        .country-badge-uganda { background-color: #fef3c7; color: #92400e; } /* Yellow */
+        .country-badge-drc { background-color: #dbeafe; color: #1e40af; } /* Blue */
+        .country-badge-rwanda { background-color: #d1fae5; color: #065f46; } /* Green */
 
 
         /* Alert Messages */
@@ -347,6 +351,8 @@
                                 <button class="btn btn-danger" id="bulkDeleteSupervisorsBtn" style="display: none;">
                                     <i class="fas fa-trash-alt"></i> Delete Selected
                                 </button>
+                                <!-- UPDATED: Added Bulk Upload Button -->
+                                <button class="btn btn-outline" id="bulkUploadSupervisorBtn"><i class="fas fa-upload"></i> Bulk Upload</button>
                                 <button class="btn btn-primary" id="addSupervisorBtn"><i class="fas fa-plus"></i> Add Supervisor</button>
                             </div>
                         </div>
@@ -381,6 +387,8 @@
                                 <button class="btn btn-danger" id="bulkDeleteFieldOfficersBtn" style="display: none;">
                                     <i class="fas fa-trash-alt"></i> Delete Selected
                                 </button>
+                                <!-- UPDATED: Added Bulk Upload Button -->
+                                <button class="btn btn-outline" id="bulkUploadFieldOfficerBtn"><i class="fas fa-upload"></i> Bulk Upload</button>
                                 <button class="btn btn-primary" id="addFieldOfficerBtn"><i class="fas fa-plus"></i> Add Field Officer</button>
                             </div>
                         </div>
@@ -403,6 +411,41 @@
                     </div>
                 </div>
                 
+                <div class="card">
+                    <div class="card-header"><h3>Venn Officer Accounts</h3></div>
+                    <div class="card-body">
+                         <div class="table-controls">
+                            <div class="search-container">
+                                <input type="text" class="search-input" placeholder="Search Venn officers..." id="vennOfficerSearchInput">
+                                <i class="fas fa-search search-icon"></i>
+                            </div>
+                            <div class="table-actions-buttons">
+                                <button class="btn btn-danger" id="bulkDeleteVennOfficersBtn" style="display: none;">
+                                    <i class="fas fa-trash-alt"></i> Delete Selected
+                                </button>
+                                <!-- UPDATED: Added Bulk Upload Button -->
+                                <button class="btn btn-outline" id="bulkUploadVennOfficerBtn"><i class="fas fa-upload"></i> Bulk Upload</button>
+                                <button class="btn btn-primary" id="addVennOfficerBtn"><i class="fas fa-plus"></i> Add Venn Officer</button>
+                            </div>
+                        </div>
+                        <div id="vennOfficerAlert" class="alert"></div>
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th><input type="checkbox" id="selectAllVennOfficers"></th>
+                                        <th>Venn Officer Info</th>
+                                        <th>Contact</th>
+                                        <th>District</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="vennOfficersTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
                 <div class="card">
                     <div class="card-header"><h3>Data Collector Accounts</h3></div>
                     <div class="card-body">
@@ -461,21 +504,19 @@
                                 <input type="password" class="form-control" id="confirmNewPassword" required>
                                 <button type="button" class="toggle-password"><i class="fas fa-eye"></i></button>
                             </div>
-                            <button type="submit" class="btn btn-primary" id="adminPasswordSubmitBtn">
-                                Update Password
-                            </button>
+                            <button type="submit" class="btn btn-primary" id="adminPasswordSubmitBtn"> Update Password </button>
                         </form>
                     </div>
                 </div>
             </div>
-            
+
             <div class="settings-content" id="adminsTab">
                 <div class="card">
                     <div class="card-header"><h3>Manage Admin Accounts</h3></div>
                     <div class="card-body">
                         <div class="table-controls">
-                             <p class="form-text" style="margin: 0; max-width: 600px;">Add or remove other admin accounts. The primary 'admin' account cannot be deleted.</p>
-                             <button class="btn btn-primary" id="addAdminBtn"><i class="fas fa-plus"></i> Add Admin</button>
+                            <p class="form-text" style="margin: 0; max-width: 600px;">Add or remove other admin accounts. The primary 'admin' account cannot be deleted.</p>
+                            <button class="btn btn-primary" id="addAdminBtn"><i class="fas fa-plus"></i> Add Admin</button>
                         </div>
                         <div id="adminAccountsAlert" class="alert"></div>
                         <div class="table-responsive">
@@ -524,21 +565,22 @@
                     </div>
                 </div>
                 <div class="card danger-zone">
-                     <div class="card-header"><h3>Danger Zone</h3></div>
-                     <div class="card-body">
-                         <p>This action will permanently delete all inventory, users, and logs. This cannot be undone.</p>
-                         <button class="btn btn-danger" id="resetDataBtn">Reset Application Data</button>
-                     </div>
+                    <div class="card-header"><h3>Danger Zone</h3></div>
+                    <div class="card-body">
+                        <p>This action will permanently delete all inventory, users, and logs. This cannot be undone.</p>
+                        <button class="btn btn-danger" id="resetDataBtn">Reset Application Data</button>
+                    </div>
                 </div>
             </div>
         </main>
     </div>
-
+    
+    <!-- Supervisor Modal -->
     <div class="modal" id="supervisorModal">
         <div class="modal-content">
             <div class="modal-header">
                 <h3 id="supervisorModalTitle">Add Supervisor</h3>
-                <button class="modal-close">&times;</button>
+                <button class="modal-close" data-modal="supervisorModal">&times;</button>
             </div>
             <div class="modal-body">
                 <form id="supervisorForm">
@@ -589,28 +631,29 @@
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-outline modal-close">Cancel</button>
-                <button type="submit" form="supervisorForm" class="btn btn-primary">Save Supervisor</button>
+                <button class="btn btn-outline modal-close" data-modal="supervisorModal">Cancel</button>
+                <button type="submit" class="btn btn-primary" form="supervisorForm" id="saveSupervisorBtn">Save Supervisor</button>
             </div>
         </div>
     </div>
     
+    <!-- Field Officer Modal -->
     <div class="modal" id="fieldOfficerModal">
         <div class="modal-content">
             <div class="modal-header">
                 <h3 id="fieldOfficerModalTitle">Add Field Officer</h3>
-                <button class="modal-close">&times;</button>
+                <button class="modal-close" data-modal="fieldOfficerModal">&times;</button>
             </div>
             <div class="modal-body">
                 <form id="fieldOfficerForm">
                     <input type="hidden" id="fieldOfficerId">
-                     <div class="form-grid">
+                    <div class="form-grid">
                         <div class="form-group">
                             <label for="fieldOfficerName">Full Name *</label>
                             <input type="text" class="form-control" id="fieldOfficerName" required>
                         </div>
                         <div class="form-group">
-                            <label for="fieldOfficerEmpId">Field Officer ID *</label>
+                            <label for="fieldOfficerEmpId">FS ID *</label>
                             <input type="text" class="form-control" id="fieldOfficerEmpId" required>
                         </div>
                         <div class="form-group">
@@ -626,41 +669,104 @@
                             <h4>Login Credentials</h4>
                         </div>
                         <div class="form-group">
-                           <label for="fieldOfficerUsername">Username *</label>
-                           <input type="text" class="form-control" id="fieldOfficerUsername" required>
-                       </div>
-                       <div class="form-group password-toggle">
-                           <label for="fieldOfficerPassword">Password *</label>
-                           <input type="password" class="form-control" id="fieldOfficerPassword">
-                           <button type="button" class="toggle-password"><i class="fas fa-eye"></i></button>
-                           <div class="form-text">Required for new users. Leave blank to keep current password.</div>
-                       </div>
-                       <div class="form-group">
-                           <label for="fieldOfficerDistrict">District *</label>
-                           <select class="form-control" id="fieldOfficerDistrict" required></select>
-                       </div>
-                       <div class="form-group">
-                           <label for="fieldOfficerStatus">Status *</label>
-                           <select class="form-control" id="fieldOfficerStatus" required>
-                               <option value="active">Active</option>
-                               <option value="inactive">Inactive</option>
-                           </select>
-                       </div>
+                            <label for="fieldOfficerUsername">Username *</label>
+                            <input type="text" class="form-control" id="fieldOfficerUsername" required>
+                        </div>
+                        <div class="form-group password-toggle">
+                            <label for="fieldOfficerPassword">Password *</label>
+                            <input type="password" class="form-control" id="fieldOfficerPassword">
+                            <button type="button" class="toggle-password"><i class="fas fa-eye"></i></button>
+                            <div class="form-text">Required for new users. Leave blank to keep current password.</div>
+                        </div>
+                        <div class="form-group">
+                            <label for="fieldOfficerDistrict">District *</label>
+                            <select class="form-control" id="fieldOfficerDistrict" required></select>
+                        </div>
+                        <div class="form-group">
+                            <label for="fieldOfficerStatus">Status *</label>
+                            <select class="form-control" id="fieldOfficerStatus" required>
+                                <option value="active">Active</option>
+                                <option value="inactive">Inactive</option>
+                            </select>
+                        </div>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-outline modal-close">Cancel</button>
-                <button type="submit" form="fieldOfficerForm" class="btn btn-primary">Save Field Officer</button>
+                <button class="btn btn-outline modal-close" data-modal="fieldOfficerModal">Cancel</button>
+                <button type="submit" class="btn btn-primary" form="fieldOfficerForm" id="saveFieldOfficerBtn">Save Field Officer</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Venn Officer Modal -->
+    <div class="modal" id="vennOfficerModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="vennOfficerModalTitle">Add Venn Officer</h3>
+                <button class="modal-close" data-modal="vennOfficerModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="vennOfficerForm">
+                    <input type="hidden" id="vennOfficerId">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="vennOfficerName">Full Name *</label>
+                            <input type="text" class="form-control" id="vennOfficerName" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="vennOfficerEmpId">FS ID *</label>
+                            <input type="text" class="form-control" id="vennOfficerEmpId" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="vennOfficerEmail">Email *</label>
+                            <input type="email" class="form-control" id="vennOfficerEmail" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="vennOfficerPhone">Phone Number</label>
+                            <input type="tel" class="form-control" id="vennOfficerPhone">
+                        </div>
+                        <div class="form-group full-width">
+                            <hr style="border: none; border-top: 1px solid var(--border); margin: 1rem 0;">
+                            <h4>Login Credentials</h4>
+                        </div>
+                        <div class="form-group">
+                            <label for="vennOfficerUsername">Username *</label>
+                            <input type="text" class="form-control" id="vennOfficerUsername" required>
+                        </div>
+                        <div class="form-group password-toggle">
+                            <label for="vennOfficerPassword">Password *</label>
+                            <input type="password" class="form-control" id="vennOfficerPassword">
+                            <button type="button" class="toggle-password"><i class="fas fa-eye"></i></button>
+                            <div class="form-text">Required for new users. Leave blank to keep current password.</div>
+                        </div>
+                        <div class="form-group">
+                            <label for="vennOfficerDistrict">District *</label>
+                            <select class="form-control" id="vennOfficerDistrict" required></select>
+                        </div>
+                        <div class="form-group">
+                            <label for="vennOfficerStatus">Status *</label>
+                            <select class="form-control" id="vennOfficerStatus" required>
+                                <option value="active">Active</option>
+                                <option value="inactive">Inactive</option>
+                            </select>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline modal-close" data-modal="vennOfficerModal">Cancel</button>
+                <button type="submit" class="btn btn-primary" form="vennOfficerForm" id="saveVennOfficerBtn">Save Venn Officer</button>
             </div>
         </div>
     </div>
 
+    <!-- Data Collector Modal -->
     <div class="modal" id="dataCollectorModal">
         <div class="modal-content">
             <div class="modal-header">
                 <h3 id="dataCollectorModalTitle">Add Data Collector</h3>
-                <button class="modal-close">&times;</button>
+                <button class="modal-close" data-modal="dataCollectorModal">&times;</button>
             </div>
             <div class="modal-body">
                 <form id="dataCollectorForm">
@@ -671,18 +777,32 @@
                             <input type="text" class="form-control" id="dataCollectorName" required>
                         </div>
                         <div class="form-group">
-                            <label for="dataCollectorEmpId">EM_No *</label>
-                            <input type="text" class="form-control" id="dataCollectorEmpId" required placeholder="e.g., DC-001">
+                            <label for="dataCollectorEmpId">FS ID *</label>
+                            <input type="text" class="form-control" id="dataCollectorEmpId" required>
                         </div>
                         <div class="form-group">
-                            <label for="dataCollectorPhone">Contact Number *</label>
-                            <input type="tel" class="form-control" id="dataCollectorPhone" required>
+                            <label for="dataCollectorEmail">Email *</label>
+                            <input type="email" class="form-control" id="dataCollectorEmail" required>
                         </div>
                         <div class="form-group">
-                            <label for="dataCollectorEmail">Email</label>
-                            <input type="email" class="form-control" id="dataCollectorEmail">
+                            <label for="dataCollectorPhone">Phone Number</label>
+                            <input type="tel" class="form-control" id="dataCollectorPhone">
                         </div>
                         <div class="form-group full-width">
+                            <hr style="border: none; border-top: 1px solid var(--border); margin: 1rem 0;">
+                            <h4>Login Credentials</h4>
+                        </div>
+                        <div class="form-group">
+                            <label for="dataCollectorUsername">Username *</label>
+                            <input type="text" class="form-control" id="dataCollectorUsername" required>
+                        </div>
+                        <div class="form-group password-toggle">
+                            <label for="dataCollectorPassword">Password *</label>
+                            <input type="password" class="form-control" id="dataCollectorPassword">
+                            <button type="button" class="toggle-password"><i class="fas fa-eye"></i></button>
+                            <div class="form-text">Required for new users. Leave blank to keep current password.</div>
+                        </div>
+                        <div class="form-group">
                             <label for="dataCollectorDistrict">District *</label>
                             <select class="form-control" id="dataCollectorDistrict" required></select>
                         </div>
@@ -690,922 +810,189 @@
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-outline modal-close">Cancel</button>
-                <button type="submit" form="dataCollectorForm" class="btn btn-primary">Save Collector</button>
+                <button class="btn btn-outline modal-close" data-modal="dataCollectorModal">Cancel</button>
+                <button type="submit" class="btn btn-primary" form="dataCollectorForm" id="saveDataCollectorBtn">Save Collector</button>
             </div>
         </div>
     </div>
-    <div id="bulkUploadCollectorModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Bulk Upload Data Collectors</h3>
-                <button class="modal-close">&times;</button>
-            </div>
-            <div class="modal-body">
-                <p>Upload a CSV or XLSX file. Required columns: <strong>EM_No, Name, Contact, District</strong>. Optional: <strong>Email</strong>.</p>
-                <div class="form-group">
-                    <label for="collector-file-upload">Choose File</label>
-                    <input type="file" class="form-control" id="collector-file-upload" accept=".csv, .xlsx, .xls">
-                </div>
-                <div id="upload-preview" style="display: none;"></div>
-            </div>
-            <div class="modal-footer">
-                <a href="data:text/csv;charset=utf-8,EM_No,Name,Contact,District,Email%0ADC-DEMO-1,Jane Doe,0700123456,Kagadi,jane.doe@example.com" download="datacollector_template.csv" class="btn btn-outline">
-                    <i class="fas fa-download"></i> Download Template
-                </a>
-                <button type="button" class="btn btn-success" id="confirm-collector-upload" disabled>
-                    <i class="fas fa-check"></i> Process Upload
-                </button>
-            </div>
-        </div>
-    </div>
-
+    
+    <!-- Admin Modal -->
     <div class="modal" id="adminModal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3 id="adminModalTitle">Add Admin Account</h3>
-                <button class="modal-close">&times;</button>
+                <h3 id="adminModalTitle">Add Admin</h3>
+                <button class="modal-close" data-modal="adminModal">&times;</button>
             </div>
             <div class="modal-body">
                 <form id="adminForm">
-                    <div class="form-group">
-                        <label for="adminUsername">Username *</label>
-                        <input type="text" class="form-control" id="adminUsername" required>
-                    </div>
-                    <div class="form-group password-toggle">
-                        <label for="adminPassword">Password *</label>
-                        <input type="password" class="form-control" id="adminPassword" required minlength="6">
-                        <button type="button" class="toggle-password"><i class="fas fa-eye"></i></button>
-                        <div class="form-text">Password must be at least 6 characters.</div>
-                    </div>
-                    <div class="form-group password-toggle">
-                        <label for="adminConfirmPassword">Confirm Password *</label>
-                        <input type="password" class="form-control" id="adminConfirmPassword" required>
-                        <button type="button" class="toggle-password"><i class="fas fa-eye"></i></button>
+                    <input type="hidden" id="adminId">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="adminName">Full Name *</label>
+                            <input type="text" class="form-control" id="adminName" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="adminEmpId">Employee ID</label>
+                            <input type="text" class="form-control" id="adminEmpId">
+                        </div>
+                        <div class="form-group full-width">
+                            <hr style="border: none; border-top: 1px solid var(--border); margin: 1rem 0;">
+                            <h4>Login Credentials</h4>
+                        </div>
+                         <div class="form-group">
+                            <label for="adminUsername">Username *</label>
+                            <input type="text" class="form-control" id="adminUsername" required>
+                        </div>
+                        <div class="form-group password-toggle">
+                            <label for="adminPassword">Password *</label>
+                            <input type="password" class="form-control" id="adminPassword">
+                            <button type="button" class="toggle-password"><i class="fas fa-eye"></i></button>
+                            <div class="form-text">Required for new admins. Leave blank to keep current password.</div>
+                        </div>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-outline modal-close">Cancel</button>
-                <button type="submit" form="adminForm" class="btn btn-primary">Save Admin</button>
+                <button class="btn btn-outline modal-close" data-modal="adminModal">Cancel</button>
+                <button type="submit" class="btn btn-primary" form="adminForm" id="saveAdminBtn">Save Admin</button>
             </div>
         </div>
     </div>
-
-    <div class="modal" id="deleteModal">
-        <div class="modal-content" style="max-width: 450px;">
-            <div class="modal-header"><h3>Confirm Deletion</h3><button class="modal-close">&times;</button></div>
+    
+    <!-- UPDATED: Generic Bulk Upload Modal -->
+    <div class="modal" id="bulkUploadModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="bulkUploadModalTitle">Bulk Upload</h3>
+                <button class="modal-close" data-modal="bulkUploadModal">&times;</button>
+            </div>
             <div class="modal-body">
-                <p>Are you sure you want to delete <strong id="deleteObjectName">this item</strong>? This action cannot be undone.</p>
+                <p>Download the template, fill in the data, and upload the CSV or Excel file.</p>
+                <!-- UPDATED: Changed from <a> to <button> -->
+                <button class="btn btn-outline btn-sm" id="downloadTemplateBtn"><i class="fas fa-download"></i> Download Template</button>
+                
+                <form id="bulkUploadForm" style="margin-top: 15px;">
+                    <div class="form-group">
+                        <label for="collectorFileUpload">Upload CSV/Excel File</label>
+                        <input type="file" class="form-control" id="collectorFileUpload" accept=".csv, .xlsx" required>
+                    </div>
+                    
+                    <div id="upload-preview" style="display: none;">
+                        <h4>Preview (First 5 Rows)</h4>
+                        <table id="preview-table"></table>
+                    </div>
+                </form>
             </div>
             <div class="modal-footer">
-                 <button type="button" class="btn btn-outline modal-close">Cancel</button>
-                 <button class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+                <button class="btn btn-outline modal-close" data-modal="bulkUploadModal">Cancel</button>
+                <button class="btn btn-success" id="processBulkUploadBtn" disabled>Process Upload</button>
             </div>
         </div>
     </div>
-
+    
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const loggedInUser = JSON.parse(sessionStorage.getItem('loggedInUser'));
+        document.addEventListener('DOMContentLoaded', () => {
             
-            document.getElementById('user-name').textContent = loggedInUser.username;
-            document.getElementById('user-avatar').textContent = loggedInUser.username.charAt(0).toUpperCase();
+            // --- CONSTANTS ---
+            const SUPERVISOR_KEY = 'supervisors';
+            const FIELD_OFFICER_KEY = 'fieldOfficers';
+            const VENN_OFFICER_KEY = 'vennOfficers'; // NEW
+            const DATA_COLLECTOR_KEY = 'dataCollectors';
+            const ADMIN_KEY = 'adminAccounts';
+            const DISTRICT_KEY = 'districts';
+            const LOGGED_IN_USER_KEY = 'loggedInUser';
             
-            // --- LOCAL STORAGE KEYS ---
-            const SUPERVISORS_KEY = 'supervisors';
-            // UPDATED: This key now explicitly maps to Field Officers
-            const FIELDOFFICERS_KEY = 'fieldOfficers'; 
-            const DATACOLLECTORS_KEY = 'dataCollectors';
-            const DISTRICTS_KEY = 'districts';
-            const ADMIN_ACCOUNTS_KEY = 'adminCredentials';
-
-            // --- BULK SELECTION STATE ---
-            let selectedSupervisors = new Set();
-            let selectedFieldOfficers = new Set(); // UPDATED
-            let selectedDataCollectors = new Set();
-
-            // --- DATA HELPERS ---
-            const getData = key => JSON.parse(localStorage.getItem(key)) || [];
-            const saveData = (key, data) => localStorage.setItem(key, JSON.stringify(data));
-
-            // --- APP INITIALIZATION ---
-            function initializeApp() {
-                const initData = (key, defaultData) => !localStorage.getItem(key) && localStorage.setItem(key, JSON.stringify(defaultData()));
-                
-                // --- NEW: District Data Migration ---
-                let districts = getData(DISTRICTS_KEY);
-                if (districts.length > 0 && typeof districts[0] === 'string') {
-                    // This is the old string array format, migrate it to object format
-                    const defaultUgandaDistricts = ["Amuru", "Gulu", "Isingiro", "Kabale", "Kagadi", "Kaliro", "Kamwengye", "Kanungu", "Kibaale", "Kiryandongo", "Kisoro", "Kyegegwa", "Kyenjojo", "Luuka", "Mbarara", "Mitooma", "Nwoya", "Rubanda", "Rubirizi", "Rukiga", "Rukungiri"];
-                    const migratedDistricts = districts.map(d => ({ 
-                        name: d, 
-                        country: defaultUgandaDistricts.includes(d) ? 'Uganda' : 'Uganda' // Default all existing to Uganda
-                    }));
-                    saveData(DISTRICTS_KEY, migratedDistricts.sort((a, b) => a.name.localeCompare(b.name)));
-                } else if (districts.length === 0) {
-                    // If it's completely empty, seed with new format
-                    const defaultDistricts = [
-                        { name: "Amuru", country: "Uganda" }, { name: "Gulu", country: "Uganda" },
-                        { name: "Isingiro", country: "Uganda" }, { name: "Kabale", country: "Uganda" },
-                        { name: "Kagadi", country: "Uganda" }, { name: "Kaliro", country: "Uganda" },
-                        { name: "Kamwengye", country: "Uganda" }, { name: "Kanungu", country: "Uganda" },
-                        { name: "Kibaale", country: "Uganda" }, { name: "Kiryandongo", country: "Uganda" },
-                        { name: "Kisoro", country: "Uganda" }, { name: "Kyegegwa", country: "Uganda" },
-                        { name: "Kyenjojo", country: "Uganda" }, { name: "Luuka", country: "Uganda" },
-                        { name: "Mbarara", country: "Uganda" }, { name: "Mitooma", country: "Uganda" },
-                        { name: "Nwoya", country: "Uganda" }, { name: "Rubanda", country: "Uganda" },
-                        { name: "Rubirizi", country: "Uganda" }, { name: "Rukiga", country: "Uganda" },
-                        { name: "Rukungiri", country: "Uganda" }
-                    ].sort((a, b) => a.name.localeCompare(b.name));
-                    saveData(DISTRICTS_KEY, defaultDistricts);
+            // --- INITIAL DATA SETUP (Simulating a database) ---
+            function initializeData() {
+                if (!localStorage.getItem(SUPERVISOR_KEY)) {
+                    // Sample data structure
+                    localStorage.setItem(SUPERVISOR_KEY, JSON.stringify([
+                        { id: 'sup-1', name: 'Supervisor A', empId: 'FS001', email: 'sup.a@rtv.com', phone: '256701000001', username: 'sup_a', password: 'password', role: 'supervisor', district: 'Kampala', status: 'active' },
+                        { id: 'sup-2', name: 'Supervisor B', empId: 'FS002', email: 'sup.b@rtv.com', phone: '256701000002', username: 'sup_b', password: 'password', role: 'supervisor', district: 'Gulu', status: 'inactive' },
+                    ]));
                 }
-
-                initData(SUPERVISORS_KEY, () => [{ id: Date.now(), name: 'Default Supervisor', empId: 'SUP-001', email: 'sup.kagadi@rtv.org', phone: '0700123456', username: 'sup_kagadi', password: 'password123', district: 'Kagadi', status: 'active' }]);
-                // UPDATED: Key variable name
-                initData(FIELDOFFICERS_KEY, () => [{ id: Date.now() + 1, name: 'Default Field Officer', empId: 'FO-001', email: 'fo.kyenjojo@rtv.org', phone: '0700654321', username: 'fo_kyenjojo', password: 'password123', district: 'Kyenjojo', status: 'active' }]);
-                initData(DATACOLLECTORS_KEY, () => [{ id: Date.now() + 2, name: 'Natuha Eve', empId: 'EM132', email: 'natuha@gmail.com', phone: '0700987654', district: 'Kagadi'}]);
-                
-                // Admin Accounts Initialization (Updated)
-                const adminCreds = localStorage.getItem(ADMIN_ACCOUNTS_KEY);
-                if (!adminCreds) {
-                    localStorage.setItem(ADMIN_ACCOUNTS_KEY, JSON.stringify([{ id: 1, username: 'admin', password: 'admin123', isPrimary: true }]));
-                } else {
-                    try {
-                        const parsed = JSON.parse(adminCreds);
-                        if (!Array.isArray(parsed)) {
-                            localStorage.setItem(ADMIN_ACCOUNTS_KEY, JSON.stringify([{ id: 1, username: parsed.username || 'admin', password: parsed.password || 'admin123', isPrimary: true }]));
-                        }
-                    } catch (e) {
-                         localStorage.setItem(ADMIN_ACCOUNTS_KEY, JSON.stringify([{ id: 1, username: 'admin', password: 'admin123', isPrimary: true }]));
-                    }
+                if (!localStorage.getItem(FIELD_OFFICER_KEY)) {
+                    localStorage.setItem(FIELD_OFFICER_KEY, JSON.stringify([
+                        { id: 'fo-1', name: 'Field Officer A', empId: 'FO001', email: 'fo.a@rtv.com', phone: '256702000001', username: 'fo_a', password: 'password', role: 'field_officer', district: 'Kampala', status: 'active' },
+                    ]));
                 }
-
-                populateDistrictDropdowns();
-                renderSupervisorsTable();
-                renderFieldOfficersTable(); // UPDATED
-                renderDataCollectorsTable();
-                renderDistrictsTable();
-                renderAdminsTable();
-                setupEventListeners();
-            }
-
-            // --- RENDER FUNCTIONS ---
-            function renderSupervisorsTable() {
-                const supervisors = getData(SUPERVISORS_KEY);
-                const tableBody = document.getElementById('supervisorsTableBody');
-                const searchTerm = document.getElementById('supervisorSearchInput').value.toLowerCase();
+                if (!localStorage.getItem(VENN_OFFICER_KEY)) { // NEW
+                    localStorage.setItem(VENN_OFFICER_KEY, JSON.stringify([
+                        { id: 'vo-1', name: 'Venn Officer A', empId: 'VO001', email: 'vo.a@rtv.com', phone: '256703000001', username: 'vo_a', password: 'password', role: 'venn_officer', district: 'Gulu', status: 'active' },
+                    ]));
+                }
+                if (!localStorage.getItem(DATA_COLLECTOR_KEY)) {
+                    localStorage.setItem(DATA_COLLECTOR_KEY, JSON.stringify([
+                        { id: 'dc-1', name: 'Collector A', empId: 'DC001', email: 'dc.a@rtv.com', phone: '256704000001', username: 'dc_a', password: 'password', role: 'data_collector', district: 'Kampala' },
+                    ]));
+                }
+                if (!localStorage.getItem(ADMIN_KEY)) {
+                    localStorage.setItem(ADMIN_KEY, JSON.stringify([
+                        { id: 'adm-1', name: 'Primary Admin', username: 'admin', password: 'password', role: 'admin', empId: 'ADM001' }
+                    ]));
+                }
                 
-                const filtered = supervisors.filter(item => Object.values(item).some(val => String(val).toLowerCase().includes(searchTerm)));
+                // --- UPDATED: Seeder for districts to be the source of truth ---
+                if (!localStorage.getItem(DISTRICT_KEY)) {
+                    localStorage.setItem(DISTRICT_KEY, JSON.stringify([
+                        { id: 'D001', name: 'Kampala', country: 'Uganda' },
+                        { id: 'D002', name: 'Gulu', country: 'Uganda' },
+                        { id: 'D003', name: 'Kigali', country: 'Rwanda' },
+                        { id: 'D004', name: 'Kinshasa', country: 'DRC' },
+                        { id: 'D005', name: 'Mbarara', country: 'Uganda' },
+                        { id: 'D006', name: 'Kagadi', country: 'Uganda' },
+                        { id: 'D007', name: 'Kyenjojo', country: 'Uganda' },
+                        { id: 'D008', name: 'Kyegegwa', country: 'Uganda' }
+                    ]));
+                }
+            }
+
+            // --- DATA GETTERS/SETTERS ---
+            const getSupervisorData = () => JSON.parse(localStorage.getItem(SUPERVISOR_KEY) || '[]');
+            const saveSupervisorData = (data) => localStorage.setItem(SUPERVISOR_KEY, JSON.stringify(data));
+            
+            const getFieldOfficerData = () => JSON.parse(localStorage.getItem(FIELD_OFFICER_KEY) || '[]');
+            const saveFieldOfficerData = (data) => localStorage.setItem(FIELD_OFFICER_KEY, JSON.stringify(data));
+
+            const getVennOfficerData = () => JSON.parse(localStorage.getItem(VENN_OFFICER_KEY) || '[]'); // NEW
+            const saveVennOfficerData = (data) => localStorage.setItem(VENN_OFFICER_KEY, JSON.stringify(data)); // NEW
+            
+            const getDataCollectorData = () => JSON.parse(localStorage.getItem(DATA_COLLECTOR_KEY) || '[]');
+            const saveDataCollectorData = (data) => localStorage.setItem(DATA_COLLECTOR_KEY, JSON.stringify(data));
+
+            const getAdminData = () => JSON.parse(localStorage.getItem(ADMIN_KEY) || '[]');
+            const saveAdminData = (data) => localStorage.setItem(ADMIN_KEY, JSON.stringify(data));
+
+            const getDistrictData = () => JSON.parse(localStorage.getItem(DISTRICT_KEY) || '[]');
+            const saveDistrictData = (data) => localStorage.setItem(DISTRICT_KEY, JSON.stringify(data));
+
+            const getLoggedInUser = () => JSON.parse(sessionStorage.getItem(LOGGED_IN_USER_KEY));
+            
+            // --- Global var for bulk upload data ---
+            let uploadedUserData = [];
+
+            // --- UTILITY FUNCTIONS ---
+            
+            // UPDATED: getDistrictName now uses the object array
+            function getDistrictName(districtName) {
+                const district = getDistrictData().find(d => d.name === districtName);
+                if (!district) return `<span class="district-badge">${districtName}</span> <span class="country-badge">N/A</span>`;
                 
-                tableBody.innerHTML = filtered.map(item => {
-                    const isSelected = selectedSupervisors.has(String(item.id));
-                    return `
-                    <tr data-id="${item.id}" class="${isSelected ? 'selected' : ''}">
-                        <td><input type="checkbox" class="supervisor-checkbox" data-id="${item.id}" ${isSelected ? 'checked' : ''}></td>
-                        <td>
-                            <div><strong>${item.name}</strong></div>
-                            <small style="color: var(--secondary);">ID: ${item.empId} | User: ${item.username}</small>
-                        </td>
-                        <td>
-                            <div>${item.email}</div>
-                            <small style="color: var(--secondary);">${item.phone || 'N/A'}</small>
-                        </td>
-                        <td><span class="badge district-badge">${item.district}</span></td>
-                        <td><span class="badge ${item.status === 'active' ? 'badge-success' : 'badge-warning'}">${item.status}</span></td>
-                        <td class="table-actions">
-                            <button class="btn btn-sm btn-outline edit-supervisor-btn">Edit</button>
-                            <button class="btn btn-sm btn-danger delete-supervisor-btn">Delete</button>
-                        </td>
-                    </tr>
-                `}).join('') || `<tr><td colspan="6" style="text-align: center;">No supervisors found.</td></tr>`;
-                updateBulkActionUI('supervisor');
-            }
-
-            // UPDATED: Renamed function and all internal IDs/classes
-            function renderFieldOfficersTable() {
-                const officers = getData(FIELDOFFICERS_KEY);
-                const tableBody = document.getElementById('fieldOfficersTableBody');
-                const searchTerm = document.getElementById('fieldOfficerSearchInput').value.toLowerCase();
-
-                 const filtered = officers.filter(item => Object.values(item).some(val => String(val).toLowerCase().includes(searchTerm)));
-
-                tableBody.innerHTML = filtered.map(item => {
-                    const isSelected = selectedFieldOfficers.has(String(item.id));
-                    return `
-                    <tr data-id="${item.id}" class="${isSelected ? 'selected' : ''}">
-                        <td><input type="checkbox" class="fieldOfficer-checkbox" data-id="${item.id}" ${isSelected ? 'checked' : ''}></td>
-                        <td>
-                            <div><strong>${item.name}</strong></div>
-                            <small style="color: var(--secondary);">ID: ${item.empId} | User: ${item.username || 'N/A'}</small>
-                        </td>
-                         <td>
-                            <div>${item.email}</div>
-                            <small style="color: var(--secondary);">${item.phone || 'N/A'}</small>
-                        </td>
-                        <td><span class="badge district-badge">${item.district}</span></td>
-                        <td><span class="badge ${item.status === 'active' ? 'badge-success' : 'badge-warning'}">${item.status}</span></td>
-                        <td class="table-actions">
-                            <button class="btn btn-sm btn-outline edit-fieldOfficer-btn">Edit</button>
-                            <button class="btn btn-sm btn-danger delete-fieldOfficer-btn">Delete</button>
-                        </td>
-                    </tr>
-                `}).join('') || `<tr><td colspan="6" style="text-align: center;">No Field officers found.</td></tr>`;
-                updateBulkActionUI('fieldOfficer');
-            }
-
-            function renderDataCollectorsTable() {
-                const collectors = getData(DATACOLLECTORS_KEY);
-                const tableBody = document.getElementById('dataCollectorsTableBody');
-                const searchTerm = document.getElementById('dataCollectorSearchInput').value.toLowerCase();
-
-                const filtered = collectors.filter(item => Object.values(item).some(val => String(val).toLowerCase().includes(searchTerm)));
-                
-                tableBody.innerHTML = filtered.map(item => {
-                    const isSelected = selectedDataCollectors.has(String(item.id));
-                    return `
-                    <tr data-id="${item.id}" class="${isSelected ? 'selected' : ''}">
-                        <td><input type="checkbox" class="dataCollector-checkbox" data-id="${item.id}" ${isSelected ? 'checked' : ''}></td>
-                        <td>
-                            <div><strong>${item.name}</strong></div>
-                            <small style="color: var(--secondary);">EM_No: ${item.empId}</small>
-                        </td>
-                        <td>
-                            <div>${item.email || 'N/A'}</div>
-                            <small style="color: var(--secondary);">${item.phone || 'N/A'}</small>
-                        </td>
-                        <td><span class="badge district-badge">${item.district || 'N/A'}</span></td>
-                        <td class="table-actions">
-                            <button class="btn btn-sm btn-outline edit-datacollector-btn">Edit</button>
-                            <button class="btn btn-sm btn-danger delete-datacollector-btn">Delete</button>
-                        </td>
-                    </tr>
-                `}).join('') || `<tr><td colspan="5" style="text-align: center;">No data collectors found.</td></tr>`;
-                updateBulkActionUI('dataCollector');
-            }
-
-            function renderAdminsTable() {
-                const admins = getData(ADMIN_ACCOUNTS_KEY);
-                const tableBody = document.getElementById('adminsTableBody');
-                tableBody.innerHTML = admins.map(admin => `
-                    <tr data-id="${admin.id}">
-                        <td>${admin.username}</td>
-                        <td>${admin.isPrimary ? 'Primary Admin' : 'Admin'}</td>
-                        <td class="table-actions">
-                            <button class="btn btn-sm btn-danger delete-admin-btn" 
-                                ${admin.isPrimary ? 'disabled title="Cannot delete primary admin"' : ''}>
-                                Delete
-                            </button>
-                        </td>
-                    </tr>
-                `).join('') || `<tr><td colspan="3" style="text-align: center;">No admin accounts found.</td></tr>`;
-            }
-
-            // UPDATED: To show country
-            function renderDistrictsTable() {
-                const districts = getData(DISTRICTS_KEY).sort((a, b) => a.name.localeCompare(b.name));
-                const supervisors = getData(SUPERVISORS_KEY);
-                const officers = getData(FIELDOFFICERS_KEY); // UPDATED
-                const tableBody = document.getElementById('districtsTableBody');
-                
-                tableBody.innerHTML = districts.map(d => {
-                    const userCount = [...supervisors, ...officers].filter(u => u.district === d.name).length;
-                    let countryBadgeClass = 'country-badge';
-                    if (d.country === 'DRC') countryBadgeClass = 'country-badge-drc';
-                    if (d.country === 'Rwanda') countryBadgeClass = 'country-badge-rwanda';
-                    
-                    return `
-                        <tr data-name="${d.name}">
-                            <td>${d.name}</td>
-                            <td><span class="badge ${countryBadgeClass}">${d.country}</span></td>
-                            <td>${userCount} user(s)</td>
-                            <td class="table-actions">
-                                <button class="btn btn-sm btn-danger delete-district-btn" ${userCount > 0 ? 'disabled title="Cannot delete district with assigned users"' : ''}>Delete</button>
-                            </td>
-                        </tr>`;
-                }).join('') || `<tr><td colspan="4" style="text-align: center;">No districts found.</td></tr>`;
+                const countryClass = `country-badge-${district.country.toLowerCase().replace(' ', '-')}`;
+                return `<span class="district-badge">${district.name}</span> <span class="country-badge ${countryClass}">${district.country}</span>`;
             }
             
-            // UPDATED: To show country in dropdown
-            function populateDistrictDropdowns() {
-                const districts = getData(DISTRICTS_KEY).sort((a, b) => a.name.localeCompare(b.name));
-                const optionsHTML = '<option value="">Select District</option>' + districts.map(d => 
-                    `<option value="${d.name}">${d.name} (${d.country})</option>`
-                ).join('');
-                document.getElementById('supervisorDistrict').innerHTML = optionsHTML;
-                document.getElementById('fieldOfficerDistrict').innerHTML = optionsHTML; // UPDATED
-                document.getElementById('dataCollectorDistrict').innerHTML = optionsHTML;
+            function showAlert(alertId, type, message) {
+                const alertBox = document.getElementById(alertId);
+                alertBox.className = `alert alert-${type}`;
+                alertBox.innerHTML = message;
+                alertBox.style.display = 'block';
+                setTimeout(() => { alertBox.style.display = 'none'; }, 5000);
             }
 
-            function setupEventListeners() {
-                document.getElementById('logout-btn').addEventListener('click', () => { sessionStorage.removeItem('loggedInUser'); window.location.href = 'login.html'; });
-                document.querySelectorAll('.settings-tab').forEach(tab => tab.addEventListener('click', function() {
-                    document.querySelectorAll('.settings-tab, .settings-content').forEach(el => el.classList.remove('active'));
-                    this.classList.add('active');
-                    document.getElementById(this.dataset.tab + 'Tab').classList.add('active');
-                }));
-                document.querySelectorAll('.modal-close').forEach(btn => btn.addEventListener('click', e => e.target.closest('.modal').style.display = 'none'));
-                
-                // Supervisors
-                document.getElementById('addSupervisorBtn').addEventListener('click', () => openUserModal('supervisor'));
-                document.getElementById('supervisorForm').addEventListener('submit', (e) => handleSaveUser(e, 'supervisor'));
-                document.getElementById('supervisorsTableBody').addEventListener('click', (e) => handleTableAction(e, 'supervisor'));
-                document.getElementById('supervisorSearchInput').addEventListener('input', () => { selectedSupervisors.clear(); renderSupervisorsTable(); });
-                document.getElementById('selectAllSupervisors').addEventListener('change', (e) => handleSelectAll(e, 'supervisor'));
-                document.getElementById('bulkDeleteSupervisorsBtn').addEventListener('click', () => handleBulkDelete('supervisor'));
-
-                // Field Officers (UPDATED)
-                document.getElementById('addFieldOfficerBtn').addEventListener('click', () => openUserModal('fieldOfficer'));
-                document.getElementById('fieldOfficerForm').addEventListener('submit', (e) => handleSaveUser(e, 'fieldOfficer'));
-                document.getElementById('fieldOfficersTableBody').addEventListener('click', (e) => handleTableAction(e, 'fieldOfficer'));
-                document.getElementById('fieldOfficerSearchInput').addEventListener('input', () => { selectedFieldOfficers.clear(); renderFieldOfficersTable(); });
-                document.getElementById('selectAllFieldOfficers').addEventListener('change', (e) => handleSelectAll(e, 'fieldOfficer'));
-                document.getElementById('bulkDeleteFieldOfficersBtn').addEventListener('click', () => handleBulkDelete('fieldOfficer'));
-
-                // Data Collectors
-                document.getElementById('addDataCollectorBtn').addEventListener('click', () => openDataCollectorModal());
-                document.getElementById('dataCollectorForm').addEventListener('submit', handleSaveDataCollector);
-                document.getElementById('dataCollectorsTableBody').addEventListener('click', handleDataCollectorTableAction);
-                document.getElementById('dataCollectorSearchInput').addEventListener('input', () => { selectedDataCollectors.clear(); renderDataCollectorsTable(); });
-                document.getElementById('selectAllDataCollectors').addEventListener('change', (e) => handleSelectAll(e, 'dataCollector'));
-                document.getElementById('bulkDeleteDataCollectorsBtn').addEventListener('click', () => handleBulkDelete('dataCollector'));
-                
-                document.getElementById('bulkUploadCollectorBtn').addEventListener('click', () => {
-                    const modal = document.getElementById('bulkUploadCollectorModal');
-                    const fileInput = modal.querySelector('#collector-file-upload');
-                    if(fileInput) fileInput.value = '';
-                    modal.querySelector('#upload-preview').style.display = 'none';
-                    modal.querySelector('#upload-preview').innerHTML = '';
-                    modal.querySelector('#confirm-collector-upload').disabled = true;
-                    modal.style.display = 'flex';
-                });
-                setupBulkUploadCollector();
-                
-                // Admin & System
-                document.getElementById('adminPasswordForm').addEventListener('submit', handleAdminPasswordChange);
-                document.querySelectorAll('.toggle-password').forEach(btn => btn.addEventListener('click', togglePasswordVisibility));
-                document.getElementById('addDistrictForm').addEventListener('submit', handleAddDistrict);
-                document.getElementById('districtsTableBody').addEventListener('click', handleDeleteDistrictClick);
-                document.getElementById('resetDataBtn').addEventListener('click', () => {
-                    if (confirm('DANGER: This will delete ALL data including inventory, users, and logs. Are you absolutely sure?')) {
-                        localStorage.clear();
-                        sessionStorage.clear();
-                        window.location.href = 'login.html';
-                    }
-                });
-
-                // New Admin Accounts Listeners
-                document.getElementById('addAdminBtn').addEventListener('click', openAdminModal);
-                document.getElementById('adminForm').addEventListener('submit', handleSaveAdmin);
-                document.getElementById('adminsTableBody').addEventListener('click', handleDeleteAdminClick);
-            }
-            
-            // --- MODAL & FORM HANDLERS ---
-            // UPDATED: 'userType' now accepts 'supervisor' or 'fieldOfficer'
-            function openUserModal(userType, id = null) {
-                const modalId = `${userType}Modal`;
-                const form = document.getElementById(`${userType}Form`);
-                form.reset();
-                
-                const isSupervisor = userType === 'supervisor';
-                const modalTitle = document.getElementById(`${userType}ModalTitle`);
-                const passwordInput = document.getElementById(`${userType}Password`);
-
-                if (id) {
-                    const dataKey = isSupervisor ? SUPERVISORS_KEY : FIELDOFFICERS_KEY;
-                    const user = getData(dataKey).find(u => u.id == id);
-
-                    if (!user) return showAlert(`${userType}Alert`, 'error', `Could not find user data to edit.`);
-
-                    modalTitle.textContent = `Edit ${isSupervisor ? 'Supervisor' : 'Field Officer'}`;
-                    document.getElementById(`${userType}Id`).value = user.id;
-                    document.getElementById(`${userType}Name`).value = user.name;
-                    document.getElementById(`${userType}EmpId`).value = user.empId;
-                    document.getElementById(`${userType}Email`).value = user.email;
-                    document.getElementById(`${userType}Phone`).value = user.phone;
-                    document.getElementById(`${userType}Username`).value = user.username;
-                    
-                    passwordInput.value = ''; 
-                    passwordInput.placeholder = 'Leave blank to keep current password';
-                    passwordInput.required = false;
-
-                    document.getElementById(`${userType}District`).value = user.district;
-                    document.getElementById(`${userType}Status`).value = user.status;
-                } else {
-                    modalTitle.textContent = `Add ${isSupervisor ? 'Supervisor' : 'Field Officer'}`;
-                    document.getElementById(`${userType}Id`).value = '';
-                    passwordInput.placeholder = 'Enter password';
-                    passwordInput.required = true;
-                }
-                document.getElementById(modalId).style.display = 'flex';
-            }
-           
-            function openDataCollectorModal(id = null) {
-                const modal = document.getElementById('dataCollectorModal');
-                const form = document.getElementById('dataCollectorForm');
-                form.reset();
-                
-                const modalTitle = document.getElementById('dataCollectorModalTitle');
-                
-                if (id) {
-                    const collector = getData(DATACOLLECTORS_KEY).find(c => c.id == id);
-                    if (!collector) return showAlert('dataCollectorAlert', 'error', 'Could not find collector to edit.');
-                    
-                    modalTitle.textContent = 'Edit Data Collector';
-                    document.getElementById('dataCollectorId').value = collector.id;
-                    document.getElementById('dataCollectorName').value = collector.name;
-                    document.getElementById('dataCollectorEmpId').value = collector.empId;
-                    document.getElementById('dataCollectorPhone').value = collector.phone;
-                    document.getElementById('dataCollectorEmail').value = collector.email;
-                    document.getElementById('dataCollectorDistrict').value = collector.district;
-                } else {
-                    modalTitle.textContent = 'Add Data Collector';
-                    document.getElementById('dataCollectorId').value = '';
-                }
-                modal.style.display = 'flex';
-            }
-
-            function handleSaveDataCollector(e) {
-                e.preventDefault();
-                const id = document.getElementById('dataCollectorId').value;
-                const name = document.getElementById('dataCollectorName').value.trim();
-                const empId = document.getElementById('dataCollectorEmpId').value.trim();
-                const phone = document.getElementById('dataCollectorPhone').value.trim();
-                const email = document.getElementById('dataCollectorEmail').value.trim().toLowerCase();
-                const district = document.getElementById('dataCollectorDistrict').value;
-                
-                if (!name || !empId || !phone || !district) {
-                    return showAlert('dataCollectorAlert', 'error', 'Please fill all required fields (Name, EM_No, Phone, District).');
-                }
-
-                let collectors = getData(DATACOLLECTORS_KEY);
-                if (collectors.some(c => c.empId.toLowerCase() === empId.toLowerCase() && c.id != id)) {
-                    return showAlert('dataCollectorAlert', 'error', `EM_No '${empId}' is already in use.`);
-                }
-                
-                const collectorObject = { name, empId, phone, email, district };
-
-                if (id) { // Editing
-                    const index = collectors.findIndex(c => c.id == id);
-                    if (index > -1) collectors[index] = { ...collectors[index], ...collectorObject };
-                } else { // Adding
-                    collectors.unshift({ id: Date.now(), ...collectorObject });
-                }
-
-                saveData(DATACOLLECTORS_KEY, collectors);
-                renderDataCollectorsTable();
-                document.getElementById('dataCollectorModal').style.display = 'none';
-                showAlert('dataCollectorAlert', 'success', 'Data Collector saved successfully.');
-            }
-
-            function handleDataCollectorTableAction(e) {
-                const btn = e.target.closest('button');
-                if (e.target.matches('.dataCollector-checkbox')) {
-                    handleCheckboxClick(e.target, 'dataCollector');
-                    return;
-                }
-                if (!btn) return;
-                const id = btn.closest('tr').dataset.id;
-                
-                if (btn.classList.contains('edit-datacollector-btn')) {
-                    openDataCollectorModal(id);
-                } else if (btn.classList.contains('delete-datacollector-btn')) {
-                    const collector = getData(DATACOLLECTORS_KEY).find(c => c.id == id);
-                    const deleteCallback = () => {
-                        saveData(DATACOLLECTORS_KEY, getData(DATACOLLECTORS_KEY).filter(item => item.id != id));
-                        renderDataCollectorsTable();
-                        showAlert('dataCollectorAlert', 'success', 'Collector deleted successfully.');
-                    };
-                    openDeleteModal(collector.name, deleteCallback);
-                }
-            }
-
-            // NEW: Helper function to open email client
-            function sendWelcomeEmail(email, name, username, password, userType) {
-                if (!email || !password) return; // Don't try if no email or password
-
-                const subject = "Welcome to RTV Inventory Hub - Your Account Details";
-                const body = `Hello ${name},
-    
-Your account for the RTV Inventory Hub has been created.
-    
-Your login details are:
-Username: ${username}
-Password: ${password}
-    
-Please log in and keep these details safe.
-    
-Thanks,
-RTV Admin`;
-                
-                const encodedSubject = encodeURIComponent(subject);
-                const encodedBody = encodeURIComponent(body);
-                
-                // Show a specific alert
-                const alertId = userType === 'supervisor' ? 'supervisorAlert' : 'fieldOfficerAlert';
-                showAlert(
-                    alertId, 
-                    'success', 
-                    `User saved. Now attempting to open your email client to send login details to ${email}.`
-                );
-                
-                // Open the user's default email client in a new tab
-                window.open(`mailto:${email}?subject=${encodedSubject}&body=${encodedBody}`, '_blank');
-            }
-
-            // UPDATED: To handle 'fieldOfficer' and call sendWelcomeEmail
-            function handleSaveUser(e, userType) {
-                e.preventDefault();
-                const isSupervisor = userType === 'supervisor';
-                const dataKey = isSupervisor ? SUPERVISORS_KEY : FIELDOFFICERS_KEY;
-                const alertId = isSupervisor ? 'supervisorAlert' : 'fieldOfficerAlert';
-
-                const id = document.getElementById(`${userType}Id`).value;
-                const name = document.getElementById(`${userType}Name`).value.trim();
-                const empId = document.getElementById(`${userType}EmpId`).value.trim();
-                const email = document.getElementById(`${userType}Email`).value.trim().toLowerCase();
-                const phone = document.getElementById(`${userType}Phone`).value.trim();
-                const username = document.getElementById(`${userType}Username`).value.trim().toLowerCase();
-                const password = document.getElementById(`${userType}Password`).value;
-                const district = document.getElementById(`${userType}District`).value;
-                const status = document.getElementById(`${userType}Status`).value;
-                
-                if (!name || !username || !district || !empId || !email) return;
-                
-                let allUsers = [...getData(SUPERVISORS_KEY), ...getData(FIELDOFFICERS_KEY)];
-                if (allUsers.some(u => u.username === username && u.id != id)) return showAlert(alertId, 'error', `Username '${username}' is already taken.`);
-                if (allUsers.some(u => u.empId === empId && u.id != id)) return showAlert(alertId, 'error', `ID '${empId}' is already in use.`);
-                
-                let data = getData(dataKey);
-                const userObject = { name, empId, email, phone, username, district, status };
-                
-                let userWasNew = false;
-
-                if (id) {
-                    const index = data.findIndex(u => u.id == id);
-                    if (index > -1) {
-                        data[index] = { ...data[index], ...userObject };
-                        if (password) data[index].password = password;
-                    }
-                } else {
-                    if (!password) return showAlert(alertId, 'error', 'Password is required for new users.');
-                    data.unshift({ id: Date.now(), ...userObject, password });
-                    userWasNew = true;
-                }
-                
-                saveData(dataKey, data);
-                isSupervisor ? renderSupervisorsTable() : renderFieldOfficersTable();
-                renderDistrictsTable();
-                document.getElementById(`${userType}Modal`).style.display = 'none';
-
-                // NEW: Send email logic
-                if (userWasNew && password) {
-                    sendWelcomeEmail(email, name, username, password, userType);
-                } else {
-                    showAlert(alertId, 'success', `${isSupervisor ? 'Supervisor' : 'Field Officer'} saved successfully.`);
-                }
-            }
-            
-            // UPDATED: To handle 'fieldOfficer'
-            function handleTableAction(e, userType) {
-                if (e.target.matches(`.${userType}-checkbox`)) {
-                    handleCheckboxClick(e.target, userType);
-                    return;
-                }
-                const btn = e.target.closest('button');
-                if (!btn) return;
-                const id = btn.closest('tr').dataset.id;
-                
-                if (btn.classList.contains(`edit-${userType}-btn`)) {
-                    openUserModal(userType, id);
-                } else if (btn.classList.contains(`delete-${userType}-btn`)) {
-                    const isSupervisor = userType === 'supervisor';
-                    const dataKey = isSupervisor ? SUPERVISORS_KEY : FIELDOFFICERS_KEY;
-                    const user = getData(dataKey).find(u => u.id == id);
-                    if (!user) return; // Safety check
-                    const deleteCallback = () => {
-                        saveData(dataKey, getData(dataKey).filter(item => item.id != id));
-                        renderSupervisorsTable();
-                        renderFieldOfficersTable();
-                        renderDistrictsTable();
-                        showAlert(isSupervisor ? 'supervisorAlert' : 'fieldOfficerAlert', 'success', 'User deleted successfully.');
-                    };
-                    openDeleteModal(`${user.name} (${userType})`, deleteCallback);
-                }
-            }
-
-            function openDeleteModal(name, confirmCallback) {
-                const modal = document.getElementById('deleteModal');
-                document.getElementById('deleteObjectName').textContent = name;
-                
-                const oldBtn = document.getElementById('confirmDeleteBtn');
-                const newBtn = oldBtn.cloneNode(true);
-                oldBtn.parentNode.replaceChild(newBtn, oldBtn);
-
-                newBtn.addEventListener('click', () => {
-                    confirmCallback();
-                    modal.style.display = 'none';
-                });
-                modal.style.display = 'flex';
-            }
-
-            // --- BULK ACTION HANDLERS ---
-            function handleCheckboxClick(checkbox, userType) {
-                const id = String(checkbox.dataset.id);
-                const selectedSet = getSelectedSet(userType);
-                const row = checkbox.closest('tr');
-                if (checkbox.checked) {
-                    selectedSet.add(id);
-                    row.classList.add('selected');
-                } else {
-                    selectedSet.delete(id);
-                    row.classList.remove('selected');
-                }
-                updateBulkActionUI(userType);
-            }
-
-            function handleSelectAll(e, userType) {
-                const isChecked = e.target.checked;
-                const selectedSet = getSelectedSet(userType);
-                const tableBody = document.getElementById(`${userType}sTableBody`);
-                
-                tableBody.querySelectorAll(`.${userType}-checkbox`).forEach(checkbox => {
-                    const id = String(checkbox.dataset.id);
-                    const row = checkbox.closest('tr');
-                    checkbox.checked = isChecked;
-                    if (isChecked) {
-                        selectedSet.add(id);
-                        row.classList.add('selected');
-                    } else {
-                        selectedSet.delete(id);
-                        row.classList.remove('selected');
-                    }
-                });
-                updateBulkActionUI(userType);
-            }
-
-            // UPDATED: To handle 'fieldOfficer'
-            function handleBulkDelete(userType) {
-                const selectedSet = getSelectedSet(userType);
-                const count = selectedSet.size;
-                if (count === 0) return;
-
-                const userTypeName = userType === 'dataCollector' ? 'data collector(s)' : `${userType}(s)`;
-                if (confirm(`Are you sure you want to delete ${count} ${userTypeName}? This cannot be undone.`)) {
-                    const dataKey = userType === 'fieldOfficer' ? FIELDOFFICERS_KEY : `${userType}s`;
-                    let data = getData(dataKey);
-                    data = data.filter(item => !selectedSet.has(String(item.id)));
-                    saveData(dataKey, data);
-                    
-                    selectedSet.clear();
-                    
-                    if (userType === 'supervisor') renderSupervisorsTable();
-                    if (userType === 'fieldOfficer') renderFieldOfficersTable();
-                    if (userType === 'dataCollector') renderDataCollectorsTable();
-                    
-                    updateBulkActionUI(userType);
-                    showAlert(`${userType}Alert`, 'success', `${count} ${userTypeName} deleted successfully.`);
-                }
-            }
-
-            // UPDATED: To handle 'fieldOfficer'
-            function getSelectedSet(userType) {
-                if (userType === 'supervisor') return selectedSupervisors;
-                if (userType === 'fieldOfficer') return selectedFieldOfficers;
-                if (userType === 'dataCollector') return selectedDataCollectors;
-                return new Set();
-            }
-
-            // UPDATED: To handle 'fieldOfficer'
-            function updateBulkActionUI(userType) {
-                const selectedSet = getSelectedSet(userType);
-                const btnId = `bulkDelete${userType.charAt(0).toUpperCase() + userType.slice(1)}sBtn`;
-                const btn = document.getElementById(btnId);
-                const selectAllCheckboxId = `selectAll${userType.charAt(0).toUpperCase() + userType.slice(1)}s`;
-                const selectAllCheckbox = document.getElementById(selectAllCheckboxId);
-                const tableBody = document.getElementById(`${userType}sTableBody`);
-                
-                if (btn) {
-                    if (selectedSet.size > 0) {
-                        btn.style.display = 'inline-flex';
-                        btn.textContent = `Delete Selected (${selectedSet.size})`;
-                    } else {
-                        btn.style.display = 'none';
-                    }
-                }
-
-                // Update "Select All" checkbox state
-                if(selectAllCheckbox && tableBody) {
-                    const visibleCheckboxes = tableBody.querySelectorAll(`.${userType}-checkbox`);
-                    if (visibleCheckboxes.length > 0) {
-                        selectAllCheckbox.checked = Array.from(visibleCheckboxes).every(cb => cb.checked);
-                    } else {
-                        selectAllCheckbox.checked = false;
-                    }
-                }
-            }
-            
-            // --- SYSTEM & ADMIN HANDLERS ---
-            // UPDATED: To handle country
-            function handleAddDistrict(e) {
-                e.preventDefault();
-                const input = document.getElementById('newDistrictName');
-                const newDistrictName = input.value.trim();
-                const newDistrictCountry = document.getElementById('newDistrictCountry').value;
-                
-                if (!newDistrictName || !newDistrictCountry) return;
-
-                let districts = getData(DISTRICTS_KEY);
-                if (districts.some(d => d.name.toLowerCase() === newDistrictName.toLowerCase())) {
-                    return showAlert('districtAlert', 'error', 'District already exists.');
-                }
-                
-                districts.push({ name: newDistrictName, country: newDistrictCountry });
-                saveData(DISTRICTS_KEY, districts.sort((a, b) => a.name.localeCompare(b.name)));
-                renderDistrictsTable();
-                populateDistrictDropdowns();
-                showAlert('districtAlert', 'success', 'District added successfully.');
-                input.value = '';
-            }
-
-            function handleDeleteDistrictClick(e) {
-                const btn = e.target.closest('.delete-district-btn');
-                if (!btn || btn.disabled) return;
-                const districtName = btn.closest('tr').dataset.name;
-                
-                const deleteCallback = () => {
-                    saveData(DISTRICTS_KEY, getData(DISTRICTS_KEY).filter(d => d.name !== districtName));
-                    renderDistrictsTable();
-                    populateDistrictDropdowns();
-                    showAlert('districtAlert', 'success', 'District deleted successfully.');
-                };
-                openDeleteModal(`the district "${districtName}"`, deleteCallback);
-            }
-
-            function handleAdminPasswordChange(e) {
-                e.preventDefault();
-                const currentPassword = document.getElementById('currentPassword').value;
-                const newPassword = document.getElementById('newPassword').value;
-                const confirmNewPassword = document.getElementById('confirmNewPassword').value;
-
-                let adminAccounts = getData(ADMIN_ACCOUNTS_KEY);
-                const adminIndex = adminAccounts.findIndex(a => a.username === loggedInUser.username);
-                
-                if (adminIndex === -1) return showAlert('adminAlert', 'error', 'Could not find your user account.');
-                
-                const adminCreds = adminAccounts[adminIndex];
-
-                if (currentPassword !== adminCreds.password) return showAlert('adminAlert', 'error', 'Current password does not match.');
-                if (newPassword.length < 6) return showAlert('adminAlert', 'error', 'New password must be at least 6 characters.');
-                if (newPassword !== confirmNewPassword) return showAlert('adminAlert', 'error', 'New passwords do not match.');
-                
-                adminAccounts[adminIndex].password = newPassword;
-                saveData(ADMIN_ACCOUNTS_KEY, adminAccounts);
-                showAlert('adminAlert', 'success', 'Your password has been updated successfully.');
-                e.target.reset();
-            }
-            
-            function openAdminModal() {
-                document.getElementById('adminForm').reset();
-                document.getElementById('adminModal').style.display = 'flex';
-            }
-            
-            function handleSaveAdmin(e) {
-                e.preventDefault();
-                const username = document.getElementById('adminUsername').value.trim().toLowerCase();
-                const password = document.getElementById('adminPassword').value;
-                const confirmPassword = document.getElementById('adminConfirmPassword').value;
-                
-                if (!username || !password || !confirmPassword) return showAlert('adminAccountsAlert', 'error', 'All fields are required.');
-                if (password.length < 6) return showAlert('adminAccountsAlert', 'error', 'Password must be at least 6 characters.');
-                if (password !== confirmPassword) return showAlert('adminAccountsAlert', 'error', 'Passwords do not match.');
-                
-                let adminAccounts = getData(ADMIN_ACCOUNTS_KEY);
-                if (adminAccounts.some(a => a.username === username)) {
-                    return showAlert('adminAccountsAlert', 'error', 'That username is already taken.');
-                }
-                
-                adminAccounts.push({
-                    id: Date.now(),
-                    username: username,
-                    password: password,
-                    isPrimary: false
-                });
-                
-                saveData(ADMIN_ACCOUNTS_KEY, adminAccounts);
-                renderAdminsTable();
-                showAlert('adminAccountsAlert', 'success', 'New admin account added successfully.');
-                document.getElementById('adminModal').style.display = 'none';
-            }
-
-            function handleDeleteAdminClick(e) {
-                const btn = e.target.closest('.delete-admin-btn');
-                if (!btn || btn.disabled) return;
-                
-                const adminId = btn.closest('tr').dataset.id;
-                let adminAccounts = getData(ADMIN_ACCOUNTS_KEY);
-                const admin = adminAccounts.find(a => a.id == adminId);
-
-                if (!admin) return;
-                if (admin.isPrimary) {
-                    showAlert('adminAccountsAlert', 'error', 'Cannot delete the primary admin account.');
-                    return;
-                }
-                
-                const deleteCallback = () => {
-                    adminAccounts = adminAccounts.filter(a => a.id != adminId);
-                    saveData(ADMIN_ACCOUNTS_KEY, adminAccounts);
-                    renderAdminsTable();
-                    showAlert('adminAccountsAlert', 'success', `Admin '${admin.username}' deleted successfully.`);
-                };
-                openDeleteModal(`the admin account '${admin.username}'`, deleteCallback);
-            }
-
-            function setupBulkUploadCollector() {
-                const modal = document.getElementById('bulkUploadCollectorModal');
-                const fileInput = document.getElementById('collector-file-upload');
-                const confirmBtn = document.getElementById('confirm-collector-upload');
-                const previewDiv = modal.querySelector('#upload-preview');
-                let parsedData = [];
-
-                fileInput.addEventListener('change', (e) => {
-                    const file = e.target.files[0];
-                    if (!file) return;
-
-                    previewDiv.style.display = 'block';
-                    previewDiv.innerHTML = '<p>Processing...</p>';
-                    confirmBtn.disabled = true;
-
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                        try {
-                            const data = new Uint8Array(event.target.result);
-                            const workbook = XLSX.read(data, { type: 'array' });
-                            const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-                            parsedData = XLSX.utils.sheet_to_json(worksheet);
-                            generatePreview(parsedData);
-                        } catch (err) {
-                            previewDiv.innerHTML = `<p style="color:red;">Error parsing file: ${err.message}</p>`;
-                        }
-                    };
-                    reader.readAsArrayBuffer(file);
-                });
-
-                function generatePreview(data) {
-                    if (!data || data.length === 0) {
-                        previewDiv.innerHTML = '<p style="color:orange;">No data found in file.</p>';
-                        return;
-                    }
-                    const headers = Object.keys(data[0]);
-                    const previewHTML = `
-                        <h4>Preview (${data.length} rows found):</h4>
-                        <table>
-                            <thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
-                            <tbody>${data.slice(0, 5).map(row => `<tr>${headers.map(h => `<td>${row[h] || ''}</td>`).join('')}</tr>`).join('')}</tbody>
-                        </table>
-                        ${data.length > 5 ? `<p>... and ${data.length - 5} more.</p>` : ''}`;
-                    previewDiv.innerHTML = previewHTML;
-                    confirmBtn.disabled = false;
-                }
-
-                confirmBtn.addEventListener('click', () => {
-                    if (parsedData.length === 0) return;
-                    
-                    let collectors = getData(DATACOLLECTORS_KEY);
-                    const existingEmpIds = new Set(collectors.map(c => String(c.empId).toLowerCase()));
-                    let addedCount = 0, skippedCount = 0;
-
-                    parsedData.forEach(row => {
-                        const getVal = (keys) => {
-                            for (const key of keys) { if (row[key]) return String(row[key]); }
-                            return null;
-                        };
-                        const empId = getVal(['EM_No', 'em_no', 'empId', 'EM No']);
-                        const name = getVal(['Name', 'name']);
-                        const contact = getVal(['Contact', 'contact', 'Phone']);
-                        const email = getVal(['Email', 'email']);
-                        const district = getVal(['District', 'district']);
-
-                        if (!empId || !name || !contact || !district) {
-                            skippedCount++;
-                            return;
-                        }
-
-                        if (existingEmpIds.has(empId.toLowerCase())) {
-                            skippedCount++;
-                            return;
-                        }
-
-                        collectors.unshift({ id: Date.now() + addedCount, empId, name, phone: contact, email, district });
-                        existingEmpIds.add(empId.toLowerCase());
-                        addedCount++;
-                    });
-                    
-                    saveData(DATACOLLECTORS_KEY, collectors);
-                    showAlert('dataCollectorAlert', 'success', `Added ${addedCount} collectors. Skipped ${skippedCount} (missing data, duplicate EM_No, or missing district).`);
-                    renderDataCollectorsTable();
-                    modal.style.display = 'none';
-                });
+            function clearForm(formId) {
+                document.getElementById(formId).reset();
+                document.getElementById(formId.replace('Form', 'Id')).value = ''; // Clear hidden ID
             }
             
             function togglePasswordVisibility(e) {
@@ -1623,12 +1010,1153 @@ RTV Admin`;
                 }
             }
             
-            function showAlert(alertId, type, message) {
-                const alertBox = document.getElementById(alertId);
-                alertBox.className = `alert alert-${type}`;
-                alertBox.textContent = message;
-                alertBox.style.display = 'block';
-                setTimeout(() => { alertBox.style.display = 'none'; }, 5000);
+            // --- CSV/File Download Utility ---
+            function downloadCSV(data, filename) {
+                const csv = Papa.unparse(data);
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement("a");
+                if (link.download !== undefined) {
+                    const url = URL.createObjectURL(blob);
+                    link.setAttribute("href", url);
+                    link.setAttribute("download", filename);
+                    link.style.visibility = 'hidden';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                }
+            }
+
+            // --- UI SETUP ---
+            function setupUserUI() {
+                const user = getLoggedInUser();
+                if (user) {
+                    document.getElementById('user-avatar').textContent = user.name ? user.name.charAt(0) : user.username.charAt(0).toUpperCase();
+                    document.getElementById('user-name').textContent = user.name || user.username;
+                    document.getElementById('user-role').textContent = user.role.replace('_', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                }
+            }
+            
+            function populateDistrictDropdowns() {
+                // UPDATED: Now reads from object array
+                const districts = getDistrictData().map(d => d.name).sort();
+                const dropdowns = [
+                    document.getElementById('supervisorDistrict'),
+                    document.getElementById('fieldOfficerDistrict'),
+                    document.getElementById('vennOfficerDistrict'),
+                    document.getElementById('dataCollectorDistrict')
+                ];
+                
+                dropdowns.forEach(dropdown => {
+                    if (dropdown) {
+                        dropdown.innerHTML = ''; // Clear previous options
+                        dropdown.innerHTML = '<option value="">Select District</option>';
+                        districts.forEach(district => {
+                            const option = document.createElement('option');
+                            option.value = district;
+                            option.textContent = district;
+                            dropdown.appendChild(option);
+                        });
+                    }
+                });
+            }
+
+            // --- CRUD HELPERS ---
+            function generateNewId(key) {
+                const data = JSON.parse(localStorage.getItem(key) || '[]');
+                const prefix = key === SUPERVISOR_KEY ? 'sup-' : 
+                               key === FIELD_OFFICER_KEY ? 'fo-' :
+                               key === VENN_OFFICER_KEY ? 'vo-' :
+                               key === DATA_COLLECTOR_KEY ? 'dc-' : 'adm-';
+                const count = data.length + 1;
+                return `${prefix}${count}-${Date.now() % 1000}`; // Added timestamp to reduce collisions
+            }
+
+            function createUserObject(id, name, empId, email, phone, username, password, role, district, status) {
+                 const keyMap = {
+                    'supervisor': SUPERVISOR_KEY,
+                    'field_officer': FIELD_OFFICER_KEY,
+                    'venn_officer': VENN_OFFICER_KEY,
+                    'data_collector': DATA_COLLECTOR_KEY
+                };
+                const storageKey = keyMap[role] || DATA_COLLECTOR_KEY;
+
+                return {
+                    id: id || generateNewId(storageKey),
+                    name,
+                    empId,
+                    email,
+                    phone,
+                    username,
+                    password: password || 'default', // Only hash/salt if this were a real backend
+                    role,
+                    district,
+                    status: status || 'active'
+                };
+            }
+
+            // --- SUPERVISOR LOGIC ---
+            function renderSupervisorsTable(searchTerm = '') {
+                const data = getSupervisorData().filter(s => 
+                    s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                    s.empId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    s.district.toLowerCase().includes(searchTerm.toLowerCase())
+                );
+                const tbody = document.getElementById('supervisorsTableBody');
+                tbody.innerHTML = data.map(s => `
+                    <tr data-id="${s.id}">
+                        <td><input type="checkbox" class="supervisor-checkbox" value="${s.id}"></td>
+                        <td>
+                            <strong>${s.name}</strong> (${s.empId})<br>
+                            <small>${s.username}</small>
+                        </td>
+                        <td>${s.email}<br>${s.phone}</td>
+                        <td>${getDistrictName(s.district)}</td>
+                        <td><span class="badge badge-${s.status === 'active' ? 'success' : 'warning'}">${s.status.toUpperCase()}</span></td>
+                        <td class="table-actions">
+                            <button class="btn btn-sm btn-outline edit-supervisor-btn" data-id="${s.id}"><i class="fas fa-edit"></i></button>
+                            <button class="btn btn-sm btn-danger delete-supervisor-btn" data-id="${s.id}"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `).join('');
+                toggleBulkSupervisorDeleteButton();
+            }
+
+            function setupSupervisorEventListeners() {
+                document.getElementById('addSupervisorBtn').addEventListener('click', () => openSupervisorModal());
+                document.getElementById('supervisorSearchInput').addEventListener('input', (e) => renderSupervisorsTable(e.target.value));
+                document.getElementById('supervisorForm').addEventListener('submit', handleSupervisorFormSubmit);
+                document.getElementById('supervisorsTableBody').addEventListener('click', (e) => {
+                    if (e.target.closest('.edit-supervisor-btn')) editSupervisor(e.target.closest('.edit-supervisor-btn').dataset.id);
+                    if (e.target.closest('.delete-supervisor-btn')) deleteSupervisor(e.target.closest('.delete-supervisor-btn').dataset.id);
+                });
+                document.getElementById('selectAllSupervisors').addEventListener('change', (e) => {
+                    document.querySelectorAll('.supervisor-checkbox').forEach(cb => cb.checked = e.target.checked);
+                    toggleBulkSupervisorDeleteButton();
+                });
+                document.getElementById('supervisorsTableBody').addEventListener('change', (e) => {
+                    if (e.target.classList.contains('supervisor-checkbox')) toggleBulkSupervisorDeleteButton();
+                });
+                document.getElementById('bulkDeleteSupervisorsBtn').addEventListener('click', bulkDeleteSupervisors);
+            }
+            
+            function openSupervisorModal(id = null) {
+                clearForm('supervisorForm');
+                const modal = document.getElementById('supervisorModal');
+                const title = document.getElementById('supervisorModalTitle');
+                const saveBtn = document.getElementById('saveSupervisorBtn');
+                
+                if (id) {
+                    const supervisor = getSupervisorData().find(s => s.id === id);
+                    if (supervisor) {
+                        title.textContent = 'Edit Supervisor';
+                        document.getElementById('supervisorId').value = id;
+                        document.getElementById('supervisorName').value = supervisor.name;
+                        document.getElementById('supervisorEmpId').value = supervisor.empId;
+                        document.getElementById('supervisorEmail').value = supervisor.email;
+                        document.getElementById('supervisorPhone').value = supervisor.phone;
+                        document.getElementById('supervisorUsername').value = supervisor.username;
+                        document.getElementById('supervisorPassword').required = false;
+                        document.getElementById('supervisorDistrict').value = supervisor.district;
+                        document.getElementById('supervisorStatus').value = supervisor.status;
+                        saveBtn.textContent = 'Save Changes';
+                    }
+                } else {
+                    title.textContent = 'Add New Supervisor';
+                    document.getElementById('supervisorPassword').required = true;
+                    saveBtn.textContent = 'Save Supervisor';
+                }
+                modal.style.display = 'flex';
+            }
+            
+            function handleSupervisorFormSubmit(e) {
+                e.preventDefault();
+                const id = document.getElementById('supervisorId').value;
+                const name = document.getElementById('supervisorName').value.trim();
+                const empId = document.getElementById('supervisorEmpId').value.trim();
+                const email = document.getElementById('supervisorEmail').value.trim();
+                const phone = document.getElementById('supervisorPhone').value.trim();
+                const username = document.getElementById('supervisorUsername').value.trim();
+                const password = document.getElementById('supervisorPassword').value;
+                const district = document.getElementById('supervisorDistrict').value;
+                const status = document.getElementById('supervisorStatus').value;
+                
+                let supervisors = getSupervisorData();
+                
+                if (id) {
+                    // Edit existing
+                    const index = supervisors.findIndex(s => s.id === id);
+                    if (index > -1) {
+                        supervisors[index].name = name;
+                        supervisors[index].empId = empId;
+                        supervisors[index].email = email;
+                        supervisors[index].phone = phone;
+                        supervisors[index].username = username;
+                        if (password) supervisors[index].password = password;
+                        supervisors[index].district = district;
+                        supervisors[index].status = status;
+                        showAlert('supervisorAlert', 'success', `Supervisor ${name} updated successfully.`);
+                    }
+                } else {
+                    // Add new
+                    const newSupervisor = createUserObject(null, name, empId, email, phone, username, password, 'supervisor', district, status);
+                    supervisors.push(newSupervisor);
+                    showAlert('supervisorAlert', 'success', `Supervisor ${name} added successfully.`);
+                }
+                
+                saveSupervisorData(supervisors);
+                document.getElementById('supervisorModal').style.display = 'none';
+                renderSupervisorsTable();
+            }
+
+            function editSupervisor(id) { openSupervisorModal(id); }
+            function deleteSupervisor(id) {
+                if (confirm('Are you sure you want to delete this Supervisor account?')) {
+                    let supervisors = getSupervisorData().filter(s => s.id !== id);
+                    saveSupervisorData(supervisors);
+                    showAlert('supervisorAlert', 'success', `Supervisor account ${id} deleted.`);
+                    renderSupervisorsTable();
+                }
+            }
+            function toggleBulkSupervisorDeleteButton() {
+                const checkedCount = document.querySelectorAll('.supervisor-checkbox:checked').length;
+                document.getElementById('bulkDeleteSupervisorsBtn').style.display = checkedCount > 0 ? 'inline-flex' : 'none';
+                document.getElementById('bulkDeleteSupervisorsBtn').textContent = `Delete Selected (${checkedCount})`;
+            }
+            function bulkDeleteSupervisors() {
+                const selectedIds = Array.from(document.querySelectorAll('.supervisor-checkbox:checked')).map(cb => cb.value);
+                if (selectedIds.length === 0 || !confirm(`Are you sure you want to delete ${selectedIds.length} selected Supervisor accounts?`)) return;
+                
+                let supervisors = getSupervisorData().filter(s => !selectedIds.includes(s.id));
+                saveSupervisorData(supervisors);
+                showAlert('supervisorAlert', 'success', `${selectedIds.length} Supervisor accounts deleted.`);
+                renderSupervisorsTable();
+            }
+
+            // --- FIELD OFFICER LOGIC ---
+            function renderFieldOfficersTable(searchTerm = '') {
+                const data = getFieldOfficerData().filter(s => 
+                    s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                    s.empId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    s.district.toLowerCase().includes(searchTerm.toLowerCase())
+                );
+                const tbody = document.getElementById('fieldOfficersTableBody');
+                tbody.innerHTML = data.map(s => `
+                    <tr data-id="${s.id}">
+                        <td><input type="checkbox" class="field-officer-checkbox" value="${s.id}"></td>
+                        <td>
+                            <strong>${s.name}</strong> (${s.empId})<br>
+                            <small>${s.username}</small>
+                        </td>
+                        <td>${s.email}<br>${s.phone}</td>
+                        <td>${getDistrictName(s.district)}</td>
+                        <td><span class="badge badge-${s.status === 'active' ? 'success' : 'warning'}">${s.status.toUpperCase()}</span></td>
+                        <td class="table-actions">
+                            <button class="btn btn-sm btn-outline edit-field-officer-btn" data-id="${s.id}"><i class="fas fa-edit"></i></button>
+                            <button class="btn btn-sm btn-danger delete-field-officer-btn" data-id="${s.id}"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `).join('');
+                toggleBulkFieldOfficerDeleteButton();
+            }
+
+            function setupFieldOfficerEventListeners() {
+                document.getElementById('addFieldOfficerBtn').addEventListener('click', () => openFieldOfficerModal());
+                document.getElementById('fieldOfficerSearchInput').addEventListener('input', (e) => renderFieldOfficersTable(e.target.value));
+                document.getElementById('fieldOfficerForm').addEventListener('submit', handleFieldOfficerFormSubmit);
+                document.getElementById('fieldOfficersTableBody').addEventListener('click', (e) => {
+                    if (e.target.closest('.edit-field-officer-btn')) editFieldOfficer(e.target.closest('.edit-field-officer-btn').dataset.id);
+                    if (e.target.closest('.delete-field-officer-btn')) deleteFieldOfficer(e.target.closest('.delete-field-officer-btn').dataset.id);
+                });
+                document.getElementById('selectAllFieldOfficers').addEventListener('change', (e) => {
+                    document.querySelectorAll('.field-officer-checkbox').forEach(cb => cb.checked = e.target.checked);
+                    toggleBulkFieldOfficerDeleteButton();
+                });
+                document.getElementById('fieldOfficersTableBody').addEventListener('change', (e) => {
+                    if (e.target.classList.contains('field-officer-checkbox')) toggleBulkFieldOfficerDeleteButton();
+                });
+                document.getElementById('bulkDeleteFieldOfficersBtn').addEventListener('click', bulkDeleteFieldOfficers);
+            }
+            
+            function openFieldOfficerModal(id = null) {
+                clearForm('fieldOfficerForm');
+                const modal = document.getElementById('fieldOfficerModal');
+                const title = document.getElementById('fieldOfficerModalTitle');
+                const saveBtn = document.getElementById('saveFieldOfficerBtn');
+                
+                if (id) {
+                    const officer = getFieldOfficerData().find(s => s.id === id);
+                    if (officer) {
+                        title.textContent = 'Edit Field Officer';
+                        document.getElementById('fieldOfficerId').value = id;
+                        document.getElementById('fieldOfficerName').value = officer.name;
+                        document.getElementById('fieldOfficerEmpId').value = officer.empId;
+                        document.getElementById('fieldOfficerEmail').value = officer.email;
+                        document.getElementById('fieldOfficerPhone').value = officer.phone;
+                        document.getElementById('fieldOfficerUsername').value = officer.username;
+                        document.getElementById('fieldOfficerPassword').required = false;
+                        document.getElementById('fieldOfficerDistrict').value = officer.district;
+                        document.getElementById('fieldOfficerStatus').value = officer.status;
+                        saveBtn.textContent = 'Save Changes';
+                    }
+                } else {
+                    title.textContent = 'Add New Field Officer';
+                    document.getElementById('fieldOfficerPassword').required = true;
+                    saveBtn.textContent = 'Save Field Officer';
+                }
+                modal.style.display = 'flex';
+            }
+            
+            function handleFieldOfficerFormSubmit(e) {
+                e.preventDefault();
+                const id = document.getElementById('fieldOfficerId').value;
+                const name = document.getElementById('fieldOfficerName').value.trim();
+                const empId = document.getElementById('fieldOfficerEmpId').value.trim();
+                const email = document.getElementById('fieldOfficerEmail').value.trim();
+                const phone = document.getElementById('fieldOfficerPhone').value.trim();
+                const username = document.getElementById('fieldOfficerUsername').value.trim();
+                const password = document.getElementById('fieldOfficerPassword').value;
+                const district = document.getElementById('fieldOfficerDistrict').value;
+                const status = document.getElementById('fieldOfficerStatus').value;
+                
+                let officers = getFieldOfficerData();
+                
+                if (id) {
+                    const index = officers.findIndex(s => s.id === id);
+                    if (index > -1) {
+                        officers[index].name = name;
+                        officers[index].empId = empId;
+                        officers[index].email = email;
+                        officers[index].phone = phone;
+                        officers[index].username = username;
+                        if (password) officers[index].password = password;
+                        officers[index].district = district;
+                        officers[index].status = status;
+                        showAlert('fieldOfficerAlert', 'success', `Field Officer ${name} updated successfully.`);
+                    }
+                } else {
+                    const newOfficer = createUserObject(null, name, empId, email, phone, username, password, 'field_officer', district, status);
+                    officers.push(newOfficer);
+                    showAlert('fieldOfficerAlert', 'success', `Field Officer ${name} added successfully.`);
+                }
+                
+                saveFieldOfficerData(officers);
+                document.getElementById('fieldOfficerModal').style.display = 'none';
+                renderFieldOfficersTable();
+            }
+
+            function editFieldOfficer(id) { openFieldOfficerModal(id); }
+            function deleteFieldOfficer(id) {
+                if (confirm('Are you sure you want to delete this Field Officer account?')) {
+                    let officers = getFieldOfficerData().filter(s => s.id !== id);
+                    saveFieldOfficerData(officers);
+                    showAlert('fieldOfficerAlert', 'success', `Field Officer account ${id} deleted.`);
+                    renderFieldOfficersTable();
+                }
+            }
+            function toggleBulkFieldOfficerDeleteButton() {
+                const checkedCount = document.querySelectorAll('.field-officer-checkbox:checked').length;
+                document.getElementById('bulkDeleteFieldOfficersBtn').style.display = checkedCount > 0 ? 'inline-flex' : 'none';
+                document.getElementById('bulkDeleteFieldOfficersBtn').textContent = `Delete Selected (${checkedCount})`;
+            }
+            function bulkDeleteFieldOfficers() {
+                const selectedIds = Array.from(document.querySelectorAll('.field-officer-checkbox:checked')).map(cb => cb.value);
+                if (selectedIds.length === 0 || !confirm(`Are you sure you want to delete ${selectedIds.length} selected Field Officer accounts?`)) return;
+                
+                let officers = getFieldOfficerData().filter(s => !selectedIds.includes(s.id));
+                saveFieldOfficerData(officers);
+                showAlert('fieldOfficerAlert', 'success', `${selectedIds.length} Field Officer accounts deleted.`);
+                renderFieldOfficersTable();
+            }
+            
+            // --- VENN OFFICER LOGIC (NEW) ---
+            function renderVennOfficersTable(searchTerm = '') {
+                const data = getVennOfficerData().filter(s => 
+                    s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                    s.empId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    s.district.toLowerCase().includes(searchTerm.toLowerCase())
+                );
+                const tbody = document.getElementById('vennOfficersTableBody');
+                tbody.innerHTML = data.map(s => `
+                    <tr data-id="${s.id}">
+                        <td><input type="checkbox" class="venn-officer-checkbox" value="${s.id}"></td>
+                        <td>
+                            <strong>${s.name}</strong> (${s.empId})<br>
+                            <small>${s.username}</small>
+                        </td>
+                        <td>${s.email}<br>${s.phone}</td>
+                        <td>${getDistrictName(s.district)}</td>
+                        <td><span class="badge badge-${s.status === 'active' ? 'success' : 'warning'}">${s.status.toUpperCase()}</span></td>
+                        <td class="table-actions">
+                            <button class="btn btn-sm btn-outline edit-venn-officer-btn" data-id="${s.id}"><i class="fas fa-edit"></i></button>
+                            <button class="btn btn-sm btn-danger delete-venn-officer-btn" data-id="${s.id}"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `).join('');
+                toggleBulkVennOfficerDeleteButton();
+            }
+
+            function setupVennOfficerEventListeners() {
+                document.getElementById('addVennOfficerBtn').addEventListener('click', () => openVennOfficerModal());
+                document.getElementById('vennOfficerSearchInput').addEventListener('input', (e) => renderVennOfficersTable(e.target.value));
+                document.getElementById('vennOfficerForm').addEventListener('submit', handleVennOfficerFormSubmit);
+                document.getElementById('vennOfficersTableBody').addEventListener('click', (e) => {
+                    if (e.target.closest('.edit-venn-officer-btn')) editVennOfficer(e.target.closest('.edit-venn-officer-btn').dataset.id);
+                    if (e.target.closest('.delete-venn-officer-btn')) deleteVennOfficer(e.target.closest('.delete-venn-officer-btn').dataset.id);
+                });
+                document.getElementById('selectAllVennOfficers').addEventListener('change', (e) => {
+                    document.querySelectorAll('.venn-officer-checkbox').forEach(cb => cb.checked = e.target.checked);
+                    toggleBulkVennOfficerDeleteButton();
+                });
+                document.getElementById('vennOfficersTableBody').addEventListener('change', (e) => {
+                    if (e.target.classList.contains('venn-officer-checkbox')) toggleBulkVennOfficerDeleteButton();
+                });
+                document.getElementById('bulkDeleteVennOfficersBtn').addEventListener('click', bulkDeleteVennOfficers);
+            }
+            
+            function openVennOfficerModal(id = null) {
+                clearForm('vennOfficerForm');
+                const modal = document.getElementById('vennOfficerModal');
+                const title = document.getElementById('vennOfficerModalTitle');
+                const saveBtn = document.getElementById('saveVennOfficerBtn');
+                
+                if (id) {
+                    const officer = getVennOfficerData().find(s => s.id === id);
+                    if (officer) {
+                        title.textContent = 'Edit Venn Officer';
+                        document.getElementById('vennOfficerId').value = id;
+                        document.getElementById('vennOfficerName').value = officer.name;
+                        document.getElementById('vennOfficerEmpId').value = officer.empId;
+                        document.getElementById('vennOfficerEmail').value = officer.email;
+                        document.getElementById('vennOfficerPhone').value = officer.phone;
+                        document.getElementById('vennOfficerUsername').value = officer.username;
+                        document.getElementById('vennOfficerPassword').required = false;
+                        document.getElementById('vennOfficerDistrict').value = officer.district;
+                        document.getElementById('vennOfficerStatus').value = officer.status;
+                        saveBtn.textContent = 'Save Changes';
+                    }
+                } else {
+                    title.textContent = 'Add New Venn Officer';
+                    document.getElementById('vennOfficerPassword').required = true;
+                    saveBtn.textContent = 'Save Venn Officer';
+                }
+                modal.style.display = 'flex';
+            }
+            
+            function handleVennOfficerFormSubmit(e) {
+                e.preventDefault();
+                const id = document.getElementById('vennOfficerId').value;
+                const name = document.getElementById('vennOfficerName').value.trim();
+                const empId = document.getElementById('vennOfficerEmpId').value.trim();
+                const email = document.getElementById('vennOfficerEmail').value.trim();
+                const phone = document.getElementById('vennOfficerPhone').value.trim();
+                const username = document.getElementById('vennOfficerUsername').value.trim();
+                const password = document.getElementById('vennOfficerPassword').value;
+                const district = document.getElementById('vennOfficerDistrict').value;
+                const status = document.getElementById('vennOfficerStatus').value;
+                
+                let officers = getVennOfficerData();
+                
+                if (id) {
+                    const index = officers.findIndex(s => s.id === id);
+                    if (index > -1) {
+                        officers[index].name = name;
+                        officers[index].empId = empId;
+                        officers[index].email = email;
+                        officers[index].phone = phone;
+                        officers[index].username = username;
+                        if (password) officers[index].password = password;
+                        officers[index].district = district;
+                        officers[index].status = status;
+                        showAlert('vennOfficerAlert', 'success', `Venn Officer ${name} updated successfully.`);
+                    }
+                } else {
+                    const newOfficer = createUserObject(null, name, empId, email, phone, username, password, 'venn_officer', district, status);
+                    officers.push(newOfficer);
+                    showAlert('vennOfficerAlert', 'success', `Venn Officer ${name} added successfully.`);
+                }
+                
+                saveVennOfficerData(officers);
+                document.getElementById('vennOfficerModal').style.display = 'none';
+                renderVennOfficersTable();
+            }
+
+            function editVennOfficer(id) { openVennOfficerModal(id); }
+            function deleteVennOfficer(id) {
+                if (confirm('Are you sure you want to delete this Venn Officer account?')) {
+                    let officers = getVennOfficerData().filter(s => s.id !== id);
+                    saveVennOfficerData(officers);
+                    showAlert('vennOfficerAlert', 'success', `Venn Officer account ${id} deleted.`);
+                    renderVennOfficersTable();
+                }
+            }
+            function toggleBulkVennOfficerDeleteButton() {
+                const checkedCount = document.querySelectorAll('.venn-officer-checkbox:checked').length;
+                document.getElementById('bulkDeleteVennOfficersBtn').style.display = checkedCount > 0 ? 'inline-flex' : 'none';
+                document.getElementById('bulkDeleteVennOfficersBtn').textContent = `Delete Selected (${checkedCount})`;
+            }
+            function bulkDeleteVennOfficers() {
+                const selectedIds = Array.from(document.querySelectorAll('.venn-officer-checkbox:checked')).map(cb => cb.value);
+                if (selectedIds.length === 0 || !confirm(`Are you sure you want to delete ${selectedIds.length} selected Venn Officer accounts?`)) return;
+                
+                let officers = getVennOfficerData().filter(s => !selectedIds.includes(s.id));
+                saveVennOfficerData(officers);
+                showAlert('vennOfficerAlert', 'success', `${selectedIds.length} Venn Officer accounts deleted.`);
+                renderVennOfficersTable();
+            }
+            // --- END VENN OFFICER LOGIC ---
+
+            // --- DATA COLLECTOR LOGIC ---
+            function renderDataCollectorsTable(searchTerm = '') {
+                const data = getDataCollectorData().filter(s => 
+                    s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                    s.empId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    s.district.toLowerCase().includes(searchTerm.toLowerCase())
+                );
+                const tbody = document.getElementById('dataCollectorsTableBody');
+                tbody.innerHTML = data.map(s => `
+                    <tr data-id="${s.id}">
+                        <td><input type="checkbox" class="data-collector-checkbox" value="${s.id}"></td>
+                        <td>
+                            <strong>${s.name}</strong> (${s.empId})<br>
+                            <small>${s.username}</small>
+                        </td>
+                        <td>${s.email}<br>${s.phone}</td>
+                        <td>${getDistrictName(s.district)}</td>
+                        <td class="table-actions">
+                            <button class="btn btn-sm btn-outline edit-data-collector-btn" data-id="${s.id}"><i class="fas fa-edit"></i></button>
+                            <button class="btn btn-sm btn-danger delete-data-collector-btn" data-id="${s.id}"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `).join('');
+                toggleBulkDataCollectorDeleteButton();
+            }
+
+            function setupDataCollectorEventListeners() {
+                document.getElementById('addDataCollectorBtn').addEventListener('click', () => openDataCollectorModal());
+                document.getElementById('dataCollectorSearchInput').addEventListener('input', (e) => renderDataCollectorsTable(e.target.value));
+                document.getElementById('dataCollectorForm').addEventListener('submit', handleDataCollectorFormSubmit);
+                document.getElementById('dataCollectorsTableBody').addEventListener('click', (e) => {
+                    if (e.target.closest('.edit-data-collector-btn')) editDataCollector(e.target.closest('.edit-data-collector-btn').dataset.id);
+                    if (e.target.closest('.delete-data-collector-btn')) deleteDataCollector(e.target.closest('.delete-data-collector-btn').dataset.id);
+                });
+                document.getElementById('selectAllDataCollectors').addEventListener('change', (e) => {
+                    document.querySelectorAll('.data-collector-checkbox').forEach(cb => cb.checked = e.target.checked);
+                    toggleBulkDataCollectorDeleteButton();
+                });
+                document.getElementById('dataCollectorsTableBody').addEventListener('change', (e) => {
+                    if (e.target.classList.contains('data-collector-checkbox')) toggleBulkDataCollectorDeleteButton();
+                });
+                document.getElementById('bulkDeleteDataCollectorsBtn').addEventListener('click', bulkDeleteDataCollectors);
+                // REMOVED: Old bulk upload listener, now handled in initializeApp
+            }
+            
+            function openDataCollectorModal(id = null) {
+                clearForm('dataCollectorForm');
+                const modal = document.getElementById('dataCollectorModal');
+                const title = document.getElementById('dataCollectorModalTitle');
+                const saveBtn = document.getElementById('saveDataCollectorBtn');
+                
+                if (id) {
+                    const collector = getDataCollectorData().find(s => s.id === id);
+                    if (collector) {
+                        title.textContent = 'Edit Data Collector';
+                        document.getElementById('dataCollectorId').value = id;
+                        document.getElementById('dataCollectorName').value = collector.name;
+                        document.getElementById('dataCollectorEmpId').value = collector.empId;
+                        document.getElementById('dataCollectorEmail').value = collector.email;
+                        document.getElementById('dataCollectorPhone').value = collector.phone;
+                        document.getElementById('dataCollectorUsername').value = collector.username;
+                        document.getElementById('dataCollectorPassword').required = false;
+                        document.getElementById('dataCollectorDistrict').value = collector.district;
+                        saveBtn.textContent = 'Save Changes';
+                    }
+                } else {
+                    title.textContent = 'Add New Data Collector';
+                    document.getElementById('dataCollectorPassword').required = true;
+                    saveBtn.textContent = 'Save Collector';
+                }
+                modal.style.display = 'flex';
+            }
+            
+            function handleDataCollectorFormSubmit(e) {
+                e.preventDefault();
+                const id = document.getElementById('dataCollectorId').value;
+                const name = document.getElementById('dataCollectorName').value.trim();
+                const empId = document.getElementById('dataCollectorEmpId').value.trim();
+                const email = document.getElementById('dataCollectorEmail').value.trim();
+                const phone = document.getElementById('dataCollectorPhone').value.trim();
+                const username = document.getElementById('dataCollectorUsername').value.trim();
+                const password = document.getElementById('dataCollectorPassword').value;
+                const district = document.getElementById('dataCollectorDistrict').value;
+                
+                let collectors = getDataCollectorData();
+                
+                if (id) {
+                    const index = collectors.findIndex(s => s.id === id);
+                    if (index > -1) {
+                        collectors[index].name = name;
+                        collectors[index].empId = empId;
+                        collectors[index].email = email;
+                        collectors[index].phone = phone;
+                        collectors[index].username = username;
+                        if (password) collectors[index].password = password;
+                        collectors[index].district = district;
+                        showAlert('dataCollectorAlert', 'success', `Data Collector ${name} updated successfully.`);
+                    }
+                } else {
+                    const newCollector = createUserObject(null, name, empId, email, phone, username, password, 'data_collector', district);
+                    collectors.push(newCollector);
+                    showAlert('dataCollectorAlert', 'success', `Data Collector ${name} added successfully.`);
+                }
+                
+                saveDataCollectorData(collectors);
+                document.getElementById('dataCollectorModal').style.display = 'none';
+                renderDataCollectorsTable();
+            }
+
+            function editDataCollector(id) { openDataCollectorModal(id); }
+            function deleteDataCollector(id) {
+                if (confirm('Are you sure you want to delete this Data Collector account?')) {
+                    let collectors = getDataCollectorData().filter(s => s.id !== id);
+                    saveDataCollectorData(collectors);
+                    showAlert('dataCollectorAlert', 'success', `Data Collector account ${id} deleted.`);
+                    renderDataCollectorsTable();
+                }
+            }
+            function toggleBulkDataCollectorDeleteButton() {
+                const checkedCount = document.querySelectorAll('.data-collector-checkbox:checked').length;
+                document.getElementById('bulkDeleteDataCollectorsBtn').style.display = checkedCount > 0 ? 'inline-flex' : 'none';
+                document.getElementById('bulkDeleteDataCollectorsBtn').textContent = `Delete Selected (${checkedCount})`;
+            }
+            function bulkDeleteDataCollectors() {
+                const selectedIds = Array.from(document.querySelectorAll('.data-collector-checkbox:checked')).map(cb => cb.value);
+                if (selectedIds.length === 0 || !confirm(`Are you sure you want to delete ${selectedIds.length} selected Data Collector accounts?`)) return;
+                
+                let collectors = getDataCollectorData().filter(s => !selectedIds.includes(s.id));
+                saveDataCollectorData(collectors);
+                showAlert('dataCollectorAlert', 'success', `${selectedIds.length} Data Collector accounts deleted.`);
+                renderDataCollectorsTable();
+            }
+            
+            // --- BULK UPLOAD LOGIC (REFACTORED) ---
+
+            // --- Template Download Functions ---
+            function downloadCollectorTemplate() {
+                const template = [
+                    { "Name": "", "Employee_ID": "", "Email": "", "Phone": "", "Username": "", "Password": "", "District": "" }
+                ];
+                downloadCSV(template, 'data_collector_template.csv');
+            }
+            
+            function downloadSupervisorTemplate() {
+                const template = [
+                    { "Name": "", "Employee_ID": "", "Email": "", "Phone": "", "Username": "", "Password": "", "District": "", "Status": "active" }
+                ];
+                downloadCSV(template, 'supervisor_template.csv');
+            }
+            function downloadFieldOfficerTemplate() {
+                const template = [
+                    { "Name": "", "Employee_ID": "", "Email": "", "Phone": "", "Username": "", "Password": "", "District": "", "Status": "active" }
+                ];
+                downloadCSV(template, 'field_officer_template.csv');
+            }
+            function downloadVennOfficerTemplate() {
+                const template = [
+                    { "Name": "", "Employee_ID": "", "Email": "", "Phone": "", "Username": "", "Password": "", "District": "", "Status": "active" }
+                ];
+                downloadCSV(template, 'venn_officer_template.csv');
+            }
+            
+            // --- Modal Opener ---
+            function openBulkUploadModal(uploadType) {
+                const modal = document.getElementById('bulkUploadModal');
+                const title = document.getElementById('bulkUploadModalTitle');
+                const downloadBtn = document.getElementById('downloadTemplateBtn');
+                
+                modal.dataset.uploadType = uploadType; // Store the type
+
+                switch(uploadType) {
+                    case 'supervisor':
+                        title.textContent = 'Bulk Upload Supervisors';
+                        downloadBtn.onclick = downloadSupervisorTemplate;
+                        break;
+                    case 'fieldOfficer':
+                        title.textContent = 'Bulk Upload Field Officers';
+                        downloadBtn.onclick = downloadFieldOfficerTemplate;
+                        break;
+                    case 'vennOfficer':
+                        title.textContent = 'Bulk Upload Venn Officers';
+                        downloadBtn.onclick = downloadVennOfficerTemplate;
+                        break;
+                    case 'dataCollector':
+                    default:
+                        title.textContent = 'Bulk Upload Data Collectors';
+                        downloadBtn.onclick = downloadCollectorTemplate;
+                        break;
+                }
+                
+                modal.style.display = 'flex';
+                document.getElementById('upload-preview').style.display = 'none';
+                document.getElementById('collectorFileUpload').value = ''; // Use the same file input
+                document.getElementById('processBulkUploadBtn').disabled = true;
+                uploadedUserData = []; // Clear any previous data
+            }
+
+            // --- File Preview Logic ---
+            document.getElementById('collectorFileUpload').addEventListener('change', (event) => {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                const uploadPreview = document.getElementById('upload-preview');
+                const confirmUploadBtn = document.getElementById('processBulkUploadBtn');
+                
+                uploadPreview.style.display = 'block';
+                uploadPreview.innerHTML = '<h4>File Preview:</h4><p>Processing file...</p>';
+                confirmUploadBtn.disabled = true;
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    let data = e.target.result;
+                    let fileExtension = file.name.split('.').pop().toLowerCase();
+                    
+                    if (fileExtension === 'csv') {
+                        Papa.parse(data, {
+                            header: true,
+                            skipEmptyLines: true,
+                            complete: function(results) {
+                                if (results.errors.length > 0) {
+                                    console.error("CSV Parsing errors:", results.errors);
+                                    uploadPreview.innerHTML += '<p style="color:red;">Error parsing CSV file. Please check the file format and console for details.</p>';
+                                    return;
+                                }
+                                uploadedUserData = results.data;
+                                previewUpload(uploadedUserData);
+                            }
+                        });
+                    } else if (fileExtension === 'xlsx' || fileExtension === 'xls') {
+                        const workbook = XLSX.read(data, {type: 'binary'});
+                        const sheetName = workbook.SheetNames[0];
+                        const sheet = workbook.Sheets[sheetName];
+                        let jsonData = XLSX.utils.sheet_to_json(sheet, {header: 1});
+                        
+                        if (jsonData.length > 0) {
+                            const headers = jsonData[0].map(h => String(h).trim().replace(/\s/g, '_')); // Sanitize headers
+                            uploadedUserData = jsonData.slice(1).map(row => {
+                                let obj = {};
+                                headers.forEach((header, index) => {
+                                    obj[header] = row[index];
+                                });
+                                return obj;
+                            });
+                        }
+                        previewUpload(uploadedUserData);
+                    } else {
+                        showAlert('dataCollectorAlert', 'error', 'Unsupported file type. Please upload a CSV or XLSX file.');
+                        uploadPreview.style.display = 'none';
+                    }
+                };
+                reader.readAsBinaryString(file);
+            });
+
+            function previewUpload(data) {
+                const previewDiv = document.getElementById('upload-preview');
+                const table = document.getElementById('preview-table');
+                table.innerHTML = '';
+                
+                if (data.length === 0) {
+                    previewDiv.style.display = 'none';
+                    document.getElementById('processBulkUploadBtn').disabled = true;
+                    return;
+                }
+                
+                const headers = Object.keys(data[0]);
+                const thead = table.createTHead();
+                const hRow = thead.insertRow();
+                headers.forEach(header => {
+                    const th = document.createElement('th');
+                    th.textContent = header.replace(/_/g, ' ');
+                    hRow.appendChild(th);
+                });
+                
+                const tbody = table.createTBody();
+                data.slice(0, 5).forEach(rowObj => {
+                    const r = tbody.insertRow();
+                    headers.forEach(header => {
+                        const cell = r.insertCell();
+                        cell.textContent = rowObj[header] || '-';
+                    });
+                });
+
+                previewDiv.style.display = 'block';
+                document.getElementById('processBulkUploadBtn').disabled = false;
+            }
+
+            // --- File Processing Logic ---
+            document.getElementById('processBulkUploadBtn').addEventListener('click', handleProcessBulkUpload);
+
+            function handleProcessBulkUpload() {
+                const uploadType = document.getElementById('bulkUploadModal').dataset.uploadType;
+                
+                if (uploadType === 'supervisor') {
+                    processUserUpload(getSupervisorData, saveSupervisorData, 'supervisorAlert', 'Supervisor', 'supervisor', renderSupervisorsTable, true);
+                } else if (uploadType === 'fieldOfficer') {
+                    processUserUpload(getFieldOfficerData, saveFieldOfficerData, 'fieldOfficerAlert', 'Field Officer', 'field_officer', renderFieldOfficersTable, true);
+                } else if (uploadType === 'vennOfficer') {
+                    processUserUpload(getVennOfficerData, saveVennOfficerData, 'vennOfficerAlert', 'Venn Officer', 'venn_officer', renderVennOfficersTable, true);
+                } else if (uploadType === 'dataCollector') {
+                    processUserUpload(getDataCollectorData, saveDataCollectorData, 'dataCollectorAlert', 'Data Collector', 'data_collector', renderDataCollectorsTable, false);
+                }
+            }
+            
+            function processUserUpload(getDataFunc, saveDataFunc, alertId, userRoleName, userRoleKey, renderFunc, hasStatus) {
+                let users = getDataFunc();
+                const existingEmpIds = new Set(users.map(c => c.empId));
+                const existingUsernames = new Set(users.map(c => c.username));
+                const validDistricts = new Set(getDistrictData().map(d => d.name));
+
+                let addedCount = 0;
+                let skippedCount = 0;
+
+                // uploadedUserData is the global var holding the parsed file
+                uploadedUserData.forEach(row => {
+                    // Find keys in a case-insensitive way from the parsed file
+                    let nameKey, empIdKey, emailKey, phoneKey, usernameKey, passwordKey, districtKey, statusKey;
+                    for (const key in row) {
+                        const lowerKey = key.toLowerCase();
+                        if (lowerKey.includes('name')) nameKey = key;
+                        if (lowerKey.includes('employee_id')) empIdKey = key;
+                        if (lowerKey.includes('email')) emailKey = key;
+                        if (lowerKey.includes('phone')) phoneKey = key;
+                        if (lowerKey.includes('username')) usernameKey = key;
+                        if (lowerKey.includes('password')) passwordKey = key;
+                        if (lowerKey.includes('district')) districtKey = key;
+                        if (lowerKey.includes('status')) statusKey = key;
+                    }
+
+                    const name = row[nameKey] ? row[nameKey].trim() : '';
+                    const empId = row[empIdKey] ? row[empIdKey].trim() : '';
+                    const email = row[emailKey] ? row[emailKey].trim() : '';
+                    const phone = row[phoneKey] ? String(row[phoneKey]).trim() : '';
+                    const username = row[usernameKey] ? row[usernameKey].trim() : '';
+                    const password = row[passwordKey] ? row[passwordKey].trim() : 'password';
+                    const district = row[districtKey] ? row[districtKey].trim() : '';
+                    
+                    let status = 'active';
+                    if (hasStatus && row[statusKey]) {
+                        status = row[statusKey] ? row[statusKey].trim().toLowerCase() : 'active';
+                        if (status !== 'active' && status !== 'inactive') status = 'active';
+                    }
+
+                    if (!name || !empId || !email || !username || !district || !validDistricts.has(district) || existingEmpIds.has(empId) || existingUsernames.has(username)) {
+                        skippedCount++;
+                        return;
+                    }
+
+                    const newUser = createUserObject(null, name, empId, email, phone, username, password, userRoleKey, district, status);
+                    users.push(newUser);
+                    existingEmpIds.add(empId);
+                    existingUsernames.add(username);
+                    addedCount++;
+                });
+
+                saveDataFunc(users);
+                showAlert(alertId, 'success', `Added ${addedCount} ${userRoleName}(s). Skipped ${skippedCount} (missing data, duplicate ID/username, or invalid district).`);
+                renderFunc();
+                document.getElementById('bulkUploadModal').style.display = 'none';
+                
+                // Clear global upload data
+                uploadedUserData = [];
+            }
+            // --- END BULK UPLOAD LOGIC ---
+
+            // --- ADMIN LOGIC ---
+            function renderAdminsTable() {
+                const data = getAdminData();
+                const tbody = document.getElementById('adminsTableBody');
+                tbody.innerHTML = data.map(a => `
+                    <tr data-id="${a.id}">
+                        <td><strong>${a.username}</strong></td>
+                        <td>${a.role.toUpperCase()}</td>
+                        <td class="table-actions">
+                            ${a.username !== 'admin' ? 
+                                `<button class="btn btn-sm btn-danger delete-admin-btn" data-id="${a.id}"><i class="fas fa-trash"></i> Delete</button>`
+                                : 'Primary Account'}
+                        </td>
+                    </tr>
+                `).join('');
+            }
+
+            function setupAdminEventListeners() {
+                document.getElementById('addAdminBtn').addEventListener('click', () => openAdminModal());
+                document.getElementById('adminForm').addEventListener('submit', handleAdminFormSubmit);
+                document.getElementById('adminsTableBody').addEventListener('click', (e) => {
+                    if (e.target.closest('.delete-admin-btn')) deleteAdmin(e.target.closest('.delete-admin-btn').dataset.id);
+                });
+            }
+
+            function openAdminModal(id = null) {
+                clearForm('adminForm');
+                const modal = document.getElementById('adminModal');
+                const title = document.getElementById('adminModalTitle');
+                const saveBtn = document.getElementById('saveAdminBtn');
+                
+                if (id) {
+                    const admin = getAdminData().find(a => a.id === id);
+                    if (admin) {
+                        title.textContent = 'Edit Admin';
+                        document.getElementById('adminId').value = id;
+                        document.getElementById('adminName').value = admin.name;
+                        document.getElementById('adminEmpId').value = admin.empId || '';
+                        document.getElementById('adminUsername').value = admin.username;
+                        document.getElementById('adminPassword').required = false;
+                        saveBtn.textContent = 'Save Changes';
+                    }
+                } else {
+                    title.textContent = 'Add New Admin';
+                    document.getElementById('adminPassword').required = true;
+                    saveBtn.textContent = 'Save Admin';
+                }
+                modal.style.display = 'flex';
+            }
+
+            function handleAdminFormSubmit(e) {
+                e.preventDefault();
+                const id = document.getElementById('adminId').value;
+                const name = document.getElementById('adminName').value.trim();
+                const empId = document.getElementById('adminEmpId').value.trim();
+                const username = document.getElementById('adminUsername').value.trim();
+                const password = document.getElementById('adminPassword').value;
+
+                let admins = getAdminData();
+
+                if (id) {
+                    const index = admins.findIndex(a => a.id === id);
+                    if (index > -1) {
+                        admins[index].name = name;
+                        admins[index].empId = empId;
+                        admins[index].username = username;
+                        if (password) admins[index].password = password;
+                        showAlert('adminAccountsAlert', 'success', `Admin ${name} updated successfully.`);
+                    }
+                } else {
+                    const newAdmin = { 
+                        id: generateNewId(ADMIN_KEY), 
+                        name, 
+                        empId, 
+                        username, 
+                        password: password || 'password', 
+                        role: 'admin' 
+                    };
+                    admins.push(newAdmin);
+                    showAlert('adminAccountsAlert', 'success', `Admin ${name} added successfully.`);
+                }
+
+                saveAdminData(admins);
+                document.getElementById('adminModal').style.display = 'none';
+                renderAdminsTable();
+            }
+
+            function deleteAdmin(id) {
+                if (confirm('Are you sure you want to delete this Admin account? (Only the primary "admin" account is protected)')) {
+                    let admins = getAdminData().filter(a => a.id !== id);
+                    saveAdminData(admins);
+                    showAlert('adminAccountsAlert', 'success', `Admin account deleted.`);
+                    renderAdminsTable();
+                }
+            }
+
+            // --- DISTRICT LOGIC ---
+            function renderDistrictsTable() {
+                const districts = getDistrictData();
+                const inventory = JSON.parse(localStorage.getItem('inventoryData') || '[]');
+                const supervisors = getSupervisorData();
+                const fieldOfficers = getFieldOfficerData();
+                const vennOfficers = getVennOfficerData(); // NEW
+                const dataCollectors = getDataCollectorData();
+                
+                const allUsers = [...supervisors, ...fieldOfficers, ...vennOfficers, ...dataCollectors];
+                
+                const tbody = document.getElementById('districtsTableBody');
+                tbody.innerHTML = districts.map(d => {
+                    const assignedUsers = allUsers.filter(u => u.district === d.name).length;
+                    const inventoryCount = inventory.filter(i => i.district === d.name).length;
+                    
+                    return `
+                        <tr data-id="${d.id}">
+                            <td><strong>${d.name}</strong></td>
+                            <td>${d.country}</td>
+                            <td>${assignedUsers} users, ${inventoryCount} items</td>
+                            <td class="table-actions">
+                                <!-- UPDATED: Delete button now uses district name -->
+                                <button class="btn btn-sm btn-danger delete-district-btn" data-name="${d.name}" ${assignedUsers > 0 || inventoryCount > 0 ? 'disabled' : ''}>
+                                    <i class="fas fa-trash"></i> Delete
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+
+            document.getElementById('addDistrictForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const name = document.getElementById('newDistrictName').value.trim();
+                const country = document.getElementById('newDistrictCountry').value;
+                
+                let districts = getDistrictData();
+                if (districts.some(d => d.name.toLowerCase() === name.toLowerCase())) {
+                    showAlert('districtAlert', 'error', 'District name already exists.');
+                    return;
+                }
+                
+                const newId = `D${String(districts.length + 1).padStart(3, '0')}`;
+                districts.push({ id: newId, name, country });
+                saveDistrictData(districts);
+                showAlert('districtAlert', 'success', `District ${name} added successfully.`);
+                renderDistrictsTable();
+                populateDistrictDropdowns();
+                document.getElementById('newDistrictName').value = '';
+            });
+
+            document.getElementById('districtsTableBody').addEventListener('click', (e) => {
+                const deleteBtn = e.target.closest('.delete-district-btn');
+                if (deleteBtn) {
+                    const districtName = deleteBtn.dataset.name; // Get name, not id
+                    if (confirm(`Are you sure you want to delete the district "${districtName}"? All associated data must be unassigned first.`)) {
+                        let districts = getDistrictData().filter(d => d.name !== districtName);
+                        saveDistrictData(districts);
+                        showAlert('districtAlert', 'success', `District "${districtName}" deleted.`);
+                        renderDistrictsTable();
+                        populateDistrictDropdowns();
+                    }
+                }
+            });
+
+            // --- PROFILE/PASSWORD LOGIC ---
+            document.getElementById('adminPasswordForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const currentPassword = document.getElementById('currentPassword').value;
+                const newPassword = document.getElementById('newPassword').value;
+                const confirmNewPassword = document.getElementById('confirmNewPassword').value;
+                const user = getLoggedInUser();
+                
+                if (!user) {
+                     showAlert('adminAlert', 'error', 'Error: Not logged in.');
+                     return;
+                }
+                
+                // Find the user's details in the correct admin list
+                let admins = getAdminData();
+                const index = admins.findIndex(a => a.username === user.username);
+                
+                if (index === -1) {
+                    showAlert('adminAlert', 'error', 'Error: Could not find user account.');
+                    return;
+                }
+                
+                const userAccount = admins[index];
+
+                if (currentPassword !== userAccount.password) {
+                    showAlert('adminAlert', 'error', 'Current password is incorrect.');
+                    return;
+                }
+                
+                if (newPassword !== confirmNewPassword) {
+                    showAlert('adminAlert', 'error', 'New passwords do not match.');
+                    return;
+                }
+                
+                admins[index].password = newPassword;
+                saveAdminData(admins);
+                
+                // Update session storage as well
+                const updatedUser = {...user, password: newPassword};
+                sessionStorage.setItem(LOGGED_IN_USER_KEY, JSON.stringify(updatedUser));
+                
+                showAlert('adminAlert', 'success', 'Password updated successfully!');
+                document.getElementById('adminPasswordForm').reset();
+            });
+
+            // --- SYSTEM RESET LOGIC ---
+            document.getElementById('resetDataBtn').addEventListener('click', () => {
+                if (confirm('WARNING: This will delete ALL application data (inventory, users, districts, logs). Are you absolutely sure?')) {
+                    localStorage.clear();
+                    sessionStorage.clear();
+                    // Re-initialize sample data and redirect to login
+                    initializeData();
+                    alert('Application data reset complete. Redirecting to login.');
+                    window.location.href = 'login.html';
+                }
+            });
+
+            // --- GENERAL SETUP ---
+            function initializeApp() {
+                initializeData();
+                setupUserUI();
+                populateDistrictDropdowns();
+
+                // Render all tables
+                renderSupervisorsTable();
+                renderFieldOfficersTable();
+                renderVennOfficersTable(); // NEW
+                renderDataCollectorsTable();
+                renderAdminsTable();
+                renderDistrictsTable();
+
+                // Setup all event listeners
+                setupSupervisorEventListeners();
+                setupFieldOfficerEventListeners();
+                setupVennOfficerEventListeners(); // NEW
+                setupDataCollectorEventListeners();
+                setupAdminEventListeners();
+
+                // General event listeners
+                document.querySelectorAll('.modal-close').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const modalId = e.currentTarget.dataset.modal || e.currentTarget.closest('.modal').id;
+                        document.getElementById(modalId).style.display = 'none';
+                    });
+                });
+                document.querySelectorAll('.toggle-password').forEach(btn => {
+                    btn.addEventListener('click', togglePasswordVisibility);
+                });
+                document.getElementById('logout-btn').addEventListener('click', () => {
+                    sessionStorage.removeItem(LOGGED_IN_USER_KEY);
+                    window.location.href = 'login.html';
+                });
+                
+                document.querySelectorAll('.settings-tab').forEach(tab => {
+                    tab.addEventListener('click', (e) => {
+                        document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
+                        document.querySelectorAll('.settings-content').forEach(c => c.classList.remove('active'));
+                        
+                        e.target.classList.add('active');
+                        document.getElementById(e.target.dataset.tab + 'Tab').classList.add('active');
+                    });
+                });
+                
+                // --- UPDATED: Add listeners for new bulk upload buttons ---
+                document.getElementById('bulkUploadSupervisorBtn').addEventListener('click', () => openBulkUploadModal('supervisor'));
+                document.getElementById('bulkUploadFieldOfficerBtn').addEventListener('click', () => openBulkUploadModal('fieldOfficer'));
+                document.getElementById('bulkUploadVennOfficerBtn').addEventListener('click', () => openBulkUploadModal('vennOfficer'));
+                document.getElementById('bulkUploadCollectorBtn').addEventListener('click', () => openBulkUploadModal('dataCollector'));
+
+                
+                // Listen for changes in other tabs to refresh the table
+                window.addEventListener('storage', (e) => {
+                    if (e.key === SUPERVISOR_KEY) renderSupervisorsTable();
+                    if (e.key === FIELD_OFFICER_KEY) renderFieldOfficersTable();
+                    if (e.key === VENN_OFFICER_KEY) renderVennOfficersTable(); // NEW
+                    if (e.key === DATA_COLLECTOR_KEY) renderDataCollectorsTable();
+                    if (e.key === ADMIN_KEY) renderAdminsTable();
+                    if (e.key === DISTRICT_KEY) {
+                        populateDistrictDropdowns();
+                        renderDistrictsTable();
+                        renderSupervisorsTable(); // Rerender users to reflect new district names
+                        renderFieldOfficersTable();
+                        renderVennOfficersTable(); // NEW
+                        renderDataCollectorsTable();
+                    }
+                });
             }
             
             initializeApp();
