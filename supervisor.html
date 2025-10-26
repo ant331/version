@@ -325,7 +325,7 @@
             position: fixed;
             bottom: 20px;
             right: 20px;
-            background-color: #333;
+            background-color: #333; /* Default success */
             color: white;
             padding: 15px 25px;
             border-radius: var(--border-radius);
@@ -334,6 +334,16 @@
             visibility: hidden;
             transition: opacity 0.5s ease-in-out, visibility 0.5s ease-in-out;
             font-size: 0.9rem;
+        }
+        
+        .notification.warning {
+            background-color: var(--warning);
+            color: #333; /* Dark text for light background */
+        }
+        
+        .notification.error {
+            background-color: var(--danger);
+            color: white;
         }
         
         .notification.show { opacity: 1; visibility: visible; }
@@ -450,17 +460,25 @@
 </head>
 <body>
     <script>
-        // --- SECURITY CHECK ---
-        // This script runs first to protect the page before anything is rendered.
+        // --- UPDATED SECURITY CHECK ---
+        // This page is only for 'supervisor' and 'admin' roles.
         const loggedInUser = JSON.parse(sessionStorage.getItem('loggedInUser'));
         if (!loggedInUser) {
-            // If no user is logged in, redirect to the login page immediately.
+            // No user, redirect to login
             window.location.href = 'login.html';
-        } else if (loggedInUser.role === 'field_officer') {
-            // If the user is a field officer, they should not access this page.
-            // Redirect them to their appropriate dashboard.
-            window.location.href = 'field_office.html';
+        } else if (loggedInUser.role !== 'admin' && loggedInUser.role !== 'supervisor') {
+            // User is logged in, but is NOT an admin or supervisor.
+            // Redirect them to their appropriate dashboard based on their role.
+            if (loggedInUser.role === 'field_officer') {
+                 window.location.href = 'field_office.html';
+            } else if (loggedInUser.role === 'venn_officer') {
+                 window.location.href = 'venn_officer.html';
+            } else {
+                // Fallback for any other unknown role
+                 window.location.href = 'login.html';
+            }
         }
+        // If we are here, the user is either 'admin' or 'supervisor' and is allowed.
     </script>
     <div class="app-container">
         <aside class="sidebar">
@@ -1075,9 +1093,18 @@
             const collectorName = document.getElementById('collector-select').value;
             
             if (!collectorName) {
-                showNotification("Please select a data collector.");
+                showNotification("Please select a data collector.", "warning");
                 return;
             }
+
+            // --- NEW: Get collector email ---
+            const allCollectors = getDataCollectors();
+            const collector = allCollectors.find(c => c.name === collectorName);
+            if (!collector) {
+                showNotification("Error: Could not find data collector details.", "error");
+                return;
+            }
+            // --- END NEW ---
 
             let inventory = getInventoryData();
             const itemIndex = inventory.findIndex(i => i.id === itemId);
@@ -1091,7 +1118,11 @@
                 
                 const logDetail = originalAssignee ? `Transferred from ${originalAssignee} to ${collectorName}` : `Assigned to ${collectorName}`;
                 logMovement(itemId, 'assignment_transfer', logDetail);
-                showNotification(`Item successfully assigned to ${collectorName}.`);
+                
+                // --- NEW: Trigger email ---
+                const item = inventory[itemIndex];
+                sendAcknowledgmentEmail(collector, item);
+                // --- END NEW ---
 
                 document.getElementById('assign-modal').style.display = 'none';
                 loadSupervisorData();
@@ -1243,22 +1274,33 @@
             const actionType = modal.dataset.actionType;
             const checkedItems = Array.from(modal.querySelectorAll('input[type="checkbox"]:checked'));
             
-            if (checkedItems.length === 0) { showNotification('Please select at least one item.'); return; }
+            if (checkedItems.length === 0) { showNotification('Please select at least one item.', 'warning'); return; }
             
             const itemIds = checkedItems.map(item => item.value);
             let inventory = getInventoryData();
             let successCount = 0;
+            
+            // --- MODIFIED: Get full collector object ---
             let collectorName = '';
+            let collector = null; 
             let destinationDistrict = '';
 
             if (actionType === 'assign' || actionType === 'transfer') {
                 collectorName = document.getElementById('bulk-collector-select').value;
-                if (!collectorName) { showNotification('Please select a data collector.'); return; }
+                if (!collectorName) { showNotification('Please select a data collector.', 'warning'); return; }
+                
+                const allCollectors = getDataCollectors();
+                collector = allCollectors.find(c => c.name === collectorName);
+                if (!collector) {
+                    showNotification("Error: Could not find data collector details.", "error");
+                    return;
+                }
             }
+            // --- END MODIFIED ---
             
             if (actionType === 'district-transfer') {
                 destinationDistrict = document.getElementById('bulk-supervisor-select').value;
-                if (!destinationDistrict) { showNotification('Please select a destination district.'); return; }
+                if (!destinationDistrict) { showNotification('Please select a destination district.', 'warning'); return; }
             }
 
             itemIds.forEach(itemId => {
@@ -1286,10 +1328,10 @@
                             item.assigned = collectorName;
                              logMovement(itemId, `bulk_transfer`, `Item transferred from ${originalAssignee} to ${collectorName}`);
                             break;
-                        case 'district-transfer': // NEW
-                            item.status = 'pending-transfer'; // Send for acknowledgement
-                            item.district = destinationDistrict; // Change district
-                            item.assigned = ''; // Clear local assignment
+                        case 'district-transfer': 
+                            item.status = 'pending-transfer'; 
+                            item.district = destinationDistrict; 
+                            item.assigned = ''; 
                             logMovement(itemId, `bulk_district_transfer`, `Item transferred from ${currentSupervisor.district} to ${destinationDistrict}. Awaiting acknowledgement.`);
                             break;
                         case 'maintenance': 
@@ -1304,18 +1346,103 @@
             });
             
             saveInventoryData(inventory);
-            showNotification(`Successfully processed ${successCount} items.`);
+            
+            // --- NEW: Send Bulk Email if applicable ---
+            if ((actionType === 'assign' || actionType === 'transfer') && collector && successCount > 0) {
+                // Get the full item objects that were just updated
+                const assignedItems = itemIds.map(id => inventory.find(item => item.id === id)).filter(Boolean);
+                sendBulkAcknowledgmentEmail(collector, assignedItems);
+            } else {
+                // Show default notification for other actions
+                showNotification(`Successfully processed ${successCount} items.`);
+            }
+            // --- END NEW ---
+            
             modal.style.display = 'none';
             loadSupervisorData();
             updateTransferHistory();
         }
 
         // --- UTILITY ---
-        function showNotification(message) {
+        
+        /**
+         * Triggers a 'mailto:' link to send an acknowledgment email for a single item.
+         * @param {object} collector - The data collector object (must have .name and .email).
+         * @param {object} item - The inventory item object (must have .name and .id).
+         */
+        function sendAcknowledgmentEmail(collector, item) {
+            if (!collector || !item) return;
+
+            const collectorEmail = collector.email;
+            if (!collectorEmail) {
+                console.warn(`No email found for collector ${collector.name}. Skipping email.`);
+                showNotification(`Item assigned. No email on file for ${collector.name}.`, 'warning');
+                return;
+            }
+
+            const formLink = 'https://forms.gle/5PFvSCTKmSm1LCkb9';
+            const subject = encodeURIComponent(`Equipment Acknowledgment Required: ${item.name} (${item.id})`);
+            const body = encodeURIComponent(
+`Dear ${collector.name},
+
+You have been assigned the following item:
+- Item: ${item.name}
+- ID: ${item.id}
+
+Please confirm you have received this item by filling out the acknowledgment form at the link below:
+${formLink}
+
+Thank you,
+RTV Inventory Management`
+            );
+
+            // Open the user's default email client
+            window.location.href = `mailto:${collectorEmail}?subject=${subject}&body=${body}`;
+            
+            showNotification(`Item assigned. Opening email client for ${collector.name}.`);
+        }
+
+        /**
+         * Triggers a 'mailto:' link for a bulk assignment.
+         * @param {object} collector - The data collector object.
+         * @param {Array<object>} items - An array of inventory item objects.
+         */
+        function sendBulkAcknowledgmentEmail(collector, items) {
+            if (!collector || !items || items.length === 0) return;
+
+            const collectorEmail = collector.email;
+            if (!collectorEmail) {
+                showNotification(`Items assigned. No email on file for ${collector.name}.`, 'warning');
+                return;
+            }
+
+            const formLink = 'https://forms.gle/5PFvSCTKmSm1LCkb9';
+            const subject = encodeURIComponent(`Equipment Acknowledgment Required: ${items.length} Items Assigned`);
+            
+            const itemList = items.map(item => `- Item: ${item.name} (ID: ${item.id})`).join('\n');
+
+            const body = encodeURIComponent(
+`Dear ${collector.name},
+
+You have been assigned the following ${items.length} item(s):
+${itemList}
+
+Please confirm you have received these items by filling out the acknowledgment form at the link below:
+${formLink}
+
+Thank you,
+RTV Inventory Management`
+            );
+
+            window.location.href = `mailto:${collectorEmail}?subject=${subject}&body=${body}`;
+            showNotification(`Items assigned. Opening email client for ${collector.name}.`);
+        }
+
+        function showNotification(message, type = 'success') { // type can be 'success', 'warning', 'error'
             const toast = document.getElementById('notification-toast');
             toast.textContent = message;
-            toast.classList.add('show');
-            setTimeout(() => toast.classList.remove('show'), 3000);
+            toast.className = `notification show ${type}`; // Apply type class
+            setTimeout(() => toast.classList.remove('show'), 4000); // Increased timeout
         }
     </script>
 </body>
