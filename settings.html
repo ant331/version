@@ -446,40 +446,47 @@
                         </div>
                     </div>
                 </div>
-                <div class="card">
-                    <div class="card-header"><h3>Data Collector Accounts</h3></div>
-                    <div class="card-body">
-                         <div class="table-controls">
-                            <div class="search-container">
-                                <input type="text" class="search-input" placeholder="Search data collectors..." id="dataCollectorSearchInput">
-                                <i class="fas fa-search search-icon"></i>
-                            </div>
-                            <div class="table-actions-buttons">
-                                <button class="btn btn-danger" id="bulkDeleteDataCollectorsBtn" style="display: none;">
-                                    <i class="fas fa-trash-alt"></i> Delete Selected
-                                </button>
-                                <button class="btn btn-primary" id="addDataCollectorBtn"><i class="fas fa-plus"></i> Add Collector</button>
-                                <button class="btn btn-outline" id="bulkUploadCollectorBtn"><i class="fas fa-upload"></i> Bulk Upload</button>
-                            </div>
+                <div class="modal" id="dataCollectorModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="dataCollectorModalTitle">Add Data Collector</h3>
+                <button class="modal-close" data-modal="dataCollectorModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="dataCollectorForm">
+                    <input type="hidden" id="dataCollectorId">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="dataCollectorName">Full Name *</label>
+                            <input type="text" class="form-control" id="dataCollectorName" required>
                         </div>
-                        <div id="dataCollectorAlert" class="alert"></div>
-                        <div class="table-responsive">
-                            <table class="data-table">
-                                <thead>
-                                    <tr>
-                                        <th><input type="checkbox" id="selectAllDataCollectors"></th>
-                                        <th>Collector Info</th>
-                                        <th>Contact Info</th>
-                                        <th>District</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="dataCollectorsTableBody"></tbody>
-                            </table>
+                        <div class="form-group">
+                            <label for="dataCollectorEmpId">EM_NO *</label>
+                            <input type="text" class="form-control" id="dataCollectorEmpId" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="dataCollectorEmail">Email *</label>
+                            <input type="email" class="form-control" id="dataCollectorEmail" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="dataCollectorPhone">Phone Number</label>
+                            <input type="tel" class="form-control" id="dataCollectorPhone">
+                        </div>
+                        <!-- Removed Username and Password fields -->
+                        <div class="form-group full-width"> <!-- Made district full width -->
+                            <label for="dataCollectorDistrict">District *</label>
+                            <select class="form-control" id="dataCollectorDistrict" required></select>
                         </div>
                     </div>
-                </div>
+                </form>
             </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline modal-close" data-modal="dataCollectorModal">Cancel</button>
+                <button type="submit" class="btn btn-primary" form="dataCollectorForm" id="saveDataCollectorBtn">Save Collector</button>
+            </div>
+        </div>
+    </div>
+
 
             <div class="settings-content" id="myProfileTab">
                 <div class="card">
@@ -2154,4 +2161,5 @@
     </script>
 </body>
 </html>
+
 
