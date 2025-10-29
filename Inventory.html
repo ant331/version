@@ -333,7 +333,8 @@
         .status-in-use { color: #1e40af; background-color: #dbeafe; }
         .status-maintenance { color: #92400e; background-color: #fef3c7; }
         .status-retired { color: #991b1b; background-color: #fee2e2; }
-        .status-pending-approval { color: #9a3412; background-color: #ffedd5; }
+        .status-pending-transfer { color: #9a3412; background-color: #ffedd5; } /* Added missing status */
+        .status-reported-missing { color: #7f1d1d; background-color: #fee2e2; } /* Added missing status */
 
         .action-buttons {
             display: flex;
@@ -500,7 +501,10 @@
                 <a href="field_office.html" class="menu-item">
                     <i class="fas fa-warehouse"></i>
                     <span class="menu-text">Field Office</span>
-                <a href="venn_officer.html" class="menu-item"><i class="fas fa-user-tie"></i><span>Venn Officer</span></a>
+                </a>
+                <a href="venn_officer.html" class="menu-item">
+                    <i class="fas fa-user-tie"></i>
+                    <span class="menu-text">Venn Officer</span>
                 </a>
                 <a href="transfers.html" class="menu-item">
                     <i class="fas fa-exchange-alt"></i>
@@ -649,15 +653,16 @@
             <form id="item-form">
                 <input type="hidden" id="item-id-hidden">
                 <div class="form-group">
-                    <label for="item-id">Item ID</label>
-                    <input type="text" class="form-control" id="item-id" placeholder="Auto-generated or enter ID">
+                    <label for="item-id">Item ID *</label>
+                    <input type="text" class="form-control" id="item-id" placeholder="Enter ID or leave blank for auto-generate" required>
+                    <small style="color: var(--secondary);">Note: Auto-generate requires leaving this field blank.</small>
                 </div>
                 <div class="form-group">
-                    <label for="item-name">Item Name</label>
+                    <label for="item-name">Item Name *</label>
                     <input type="text" class="form-control" id="item-name" required>
                 </div>
                 <div class="form-group">
-                    <label for="item-type">Item Type</label>
+                    <label for="item-type">Item Type *</label>
                     <select class="form-control" id="item-type" required>
                         <option value="">Select a type</option>
                         <option value="tablet">Tablet</option>
@@ -675,20 +680,21 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="item-district">District</label>
-                     <select class="form-control" id="item-district">
-                        <option value="">Unassigned</option>
+                    <label for="item-district">District *</label>
+                    <select class="form-control" id="item-district" required>
+                        <option value="">Select a District</option>
                     </select>
                 </div>
-                 <div class="form-group">
-                    <label for="item-status">Status</label>
+                <div class="form-group">
+                    <label for="item-status">Status *</label>
                     <select class="form-control" id="item-status" required>
                         <option value="available">Available</option>
                         <option value="in-use">In Use</option>
                         <option value="maintenance">Maintenance</option>
                         <option value="retired">Retired</option>
-                        <option value="pending-approval">Pending Approval</option>
-                        </select>
+                        <option value="pending-transfer">Pending Transfer</option>
+                        <option value="reported-missing">Reported Missing</option>
+                    </select>
                 </div>
                 <div class="form-group">
                     <label for="item-notes">Notes</label>
@@ -706,13 +712,15 @@
         <div class="modal-content">
             <span class="modal-close">&times;</span>
             <h3>Bulk Upload</h3>
-            <p>Upload a CSV or XLSX file to add multiple items. Required columns are 'name' and 'type'.</p>
+            <p>Upload a CSV or XLSX file to add multiple items. Required columns are 'name', 'type', and 'district'.</p>
             <div class="form-group">
                 <label for="file-upload">Choose File</label>
                 <input type="file" class="form-control" id="file-upload" accept=".csv, .xlsx, .xls">
             </div>
             <div id="upload-preview" style="display: none;">
-                </div>
+                <h4>Preview (First 5 Rows)</h4>
+                <table id="preview-table"></table>
+            </div>
             <div class="modal-footer">
                 <a href="data:text/csv;charset=utf-8,id,name,type,status,assigned,district,notes%0ATBL-DEMO-1,Sample Tablet,tablet,available,,mbarara,This is a sample row" download="inventory_template.csv" class="btn btn-outline" id="download-template-btn">
                     <i class="fas fa-download"></i> Download Template
@@ -723,7 +731,7 @@
             </div>
         </div>
     </div>
-
+    
     <div id="qr-modal" class="modal">
         <div class="modal-content">
             <span class="modal-close">&times;</span>
@@ -735,21 +743,27 @@
     </div>
     
     <div id="notification-toast" class="notification"></div>
-
+    
     <script>
         let inventory = [];
         let movementLogs = [];
         let selectedItems = new Set();
+        
+        // --- CONSTANTS & DOM ELEMENTS ---
+        const itemTypes = ['tablet', 'phone', 'charger', 'bag', 'power-bank', 'other'];
 
         const inventoryTableBody = document.getElementById('inventory-table-body');
         const searchBox = document.getElementById('search-box');
-        
+        const filterTypeSelect = document.getElementById('filter-type');
+        const filterStatusSelect = document.getElementById('filter-status');
+        const filterDistrictSelect = document.getElementById('filter-district');
+
         // Modals
         const itemModal = document.getElementById('item-modal');
         const bulkUploadModal = document.getElementById('bulk-upload-modal');
         const qrModal = document.getElementById('qr-modal');
-        
-        // Forms and Inputs
+
+        // Forms and Inputs (Item Modal)
         const itemForm = document.getElementById('item-form');
         const itemIdHidden = document.getElementById('item-id-hidden');
         const itemIdInput = document.getElementById('item-id');
@@ -760,49 +774,73 @@
         const itemDistrictSelect = document.getElementById('item-district');
         const itemNotesInput = document.getElementById('item-notes');
 
+        // Bulk Upload Modal
+        const fileUploadInput = document.getElementById('file-upload');
+        const uploadPreviewDiv = document.getElementById('upload-preview');
+        const previewTable = document.getElementById('preview-table');
+        const confirmUploadBtn = document.getElementById('confirm-upload');
+
         // Other elements
         const selectAllCheckbox = document.getElementById('select-all-checkbox');
+        const bulkDeleteBtn = document.getElementById('bulk-delete-btn');
 
-        // --- DATA INITIALIZATION ---
-        // --- MODIFIED: Removed seeding for 'districts' and 'supervisors' ---
-        function initializeData() {
-            // This function now only seeds sample inventory if it's missing.
-            // User and district data is now ONLY seeded by login.html
-            if (!localStorage.getItem('inventoryData')) {
-                const today = new Date().toLocaleDateString();
-                const sampleInventory = [
-                    { id: 'TBL-0421', name: 'iPad Pro 12.9"', type: 'tablet', status: 'available', assigned: '', district: 'mbarara', lastUpdate: today, notes: '' },
-                    { id: 'PHN-1872', name: 'Samsung Galaxy S21', type: 'phone', status: 'in-use', assigned: 'John Smith', district: 'Kagadi', lastUpdate: today, notes: '' },
-                    { id: 'CHG-9901', name: 'Anker PowerCore', type: 'charger', status: 'pending-approval', assigned: '', district: 'mbarara', lastUpdate: today, notes: 'Returned from Kyenjojo' }
-                ];
-                localStorage.setItem('inventoryData', JSON.stringify(sampleInventory));
-            }
+        // --- CORE DATA FUNCTIONS ---
+        function getInventoryData() { return JSON.parse(localStorage.getItem('inventoryData')) || []; }
+        function getMovementLogs() { return JSON.parse(localStorage.getItem('movementLogs')) || []; }
+        function getSupervisorData() { return JSON.parse(localStorage.getItem('supervisors')) || []; }
+        function getDistrictData() { return JSON.parse(localStorage.getItem('districts')) || []; }
+        
+        function saveData() {
+            localStorage.setItem('inventoryData', JSON.stringify(inventory));
+            localStorage.setItem('movementLogs', JSON.stringify(movementLogs));
+            // Trigger storage event so other tabs/windows update
+            window.dispatchEvent(new Event('storage'));
         }
 
-        // --- Core Data Functions ---
+        function generateId(type) {
+            let prefix = (type || 'GEN').substring(0, 3).toUpperCase();
+            const randomDigits = Math.floor(1000 + Math.random() * 9000); // 4 random digits
+            const randomNumber = Math.floor(Math.random() * 100); // For better uniqueness
+            return `${prefix}-${randomDigits}-${randomNumber}`;
+        }
+
+        function logMovement(itemId, action, details) {
+            const user = JSON.parse(sessionStorage.getItem('loggedInUser')) || { username: 'System', role: 'system' };
+            movementLogs.unshift({
+                itemId,
+                action,
+                details,
+                timestamp: new Date().toISOString(),
+                user: user.username,
+                role: user.role
+            });
+        }
+
         function applyBusinessRules(item) {
-            // Rule: If an item's district is 'Mbarara', it cannot be 'in-use'. If it is, move it to 'available'.
-            // This allows for 'pending-approval', 'maintenance', etc. statuses in Mbarara.
-            if (item.district && item.district.toLowerCase() === 'mbarara' && item.status === 'in-use') {
-                logMovement(item.id, 'status_update', `Status auto-updated from 'in-use' to 'available' as it is in the Mbarara central store.`);
-                item.status = 'available';
-                item.assigned = ''; // Available items in central store should not be assigned
-                item.lastUpdate = new Date().toLocaleDateString();
+            // Rule: If an item's district is 'mbarara' (central store), it cannot be 'in-use' or assigned.
+            if (item.district && item.district.toLowerCase() === 'mbarara') {
+                if (item.status === 'in-use' || item.assigned !== '') {
+                    logMovement(item.id, 'status_update', `Status auto-updated from '${item.status}' to 'available' as it is in the Mbarara central store and cannot be 'in-use' or assigned there.`);
+                    item.status = 'available';
+                    item.assigned = ''; // Available items in central store should not be assigned
+                    item.lastUpdate = new Date().toLocaleDateString();
+                }
             }
             return item;
         }
 
         function loadData() {
             try {
-                // We no longer call getSampleData() here, as login.html is the source of truth
-                inventory = JSON.parse(localStorage.getItem('inventoryData')) || []; 
-                movementLogs = JSON.parse(localStorage.getItem('movementLogs')) || [];
-
+                inventory = getInventoryData();
+                movementLogs = getMovementLogs();
                 let wasModified = false;
+
+                // Apply rules on load
                 inventory.forEach((item, index) => {
                     const originalStatus = item.status;
+                    const originalAssigned = item.assigned;
                     const updatedItem = applyBusinessRules(item);
-                    if (updatedItem.status !== originalStatus) {
+                    if (updatedItem.status !== originalStatus || updatedItem.assigned !== originalAssigned) {
                         wasModified = true;
                     }
                     inventory[index] = updatedItem;
@@ -811,541 +849,554 @@
                 if (wasModified) {
                     saveData();
                 }
-
             } catch (e) {
                 console.error("Failed to parse data from localStorage.", e);
                 inventory = [];
                 movementLogs = [];
             }
         }
-        
-        function saveData() {
-            localStorage.setItem('inventoryData', JSON.stringify(inventory));
-            localStorage.setItem('movementLogs', JSON.stringify(movementLogs));
-            window.dispatchEvent(new Event('storage'));
-        }
 
-        // --- REMOVED getSampleData() function as it's no longer needed here ---
-
-        function generateId(type) {
-            let prefix = (type || 'GEN').substring(0, 3).toUpperCase();
-            const random = Math.floor(1000 + Math.random() * 9000);
-            return `${prefix}-${random}`;
-        }
-        
-        function logMovement(itemId, action, details) {
-            movementLogs.unshift({
-                itemId,
-                action,
-                details,
-                timestamp: new Date().toISOString()
-            });
-            saveData();
-        }
-
-        function showNotification(message) {
-            const notificationToast = document.getElementById('notification-toast');
-            notificationToast.textContent = message;
-            notificationToast.classList.add('show');
-            setTimeout(() => {
-                notificationToast.classList.remove('show');
-            }, 3000);
-        }
-
-        function openModal(modalId, isEdit = false, item = null) {
-            document.querySelectorAll('.modal').forEach(modal => modal.style.display = 'none');
-            const modal = document.getElementById(modalId);
-            modal.style.display = 'flex';
-            
-            if (modalId === 'item-modal') {
-                document.getElementById('modal-title').textContent = isEdit ? 'Edit Item' : 'Add New Item';
-                itemIdInput.readOnly = isEdit;
-                if (isEdit) {
-                    itemIdHidden.value = item.id;
-                    itemIdInput.value = item.id;
-                    itemNameInput.value = item.name;
-                    itemTypeSelect.value = item.type;
-                    itemStatusSelect.value = item.status;
-                    itemAssignedSelect.value = item.assigned || "";
-                    itemDistrictSelect.value = item.district || "";
-                    itemNotesInput.value = item.notes;
-                } else {
-                    itemForm.reset();
-                    itemIdHidden.value = '';
-                    itemIdInput.value = generateId(itemTypeSelect.value);
-                }
-            } else if (modalId === 'qr-modal' && item) {
-                document.getElementById('qr-item-name').textContent = item.name;
-                generateQrCode(item.id);
+        function initializeData() {
+            // Seed sample inventory if missing (only happens on first run)
+            if (!localStorage.getItem('inventoryData')) {
+                const today = new Date().toLocaleDateString();
+                const sampleInventory = [
+                    { id: 'TBL-0421', name: 'iPad Pro 12.9"', type: 'tablet', status: 'available', assigned: '', district: 'mbarara', lastUpdate: today, notes: '' },
+                    { id: 'PHN-1872', name: 'Samsung Galaxy S21', type: 'phone', status: 'in-use', assigned: 'John Smith', district: 'Kagadi', lastUpdate: today, notes: '' },
+                    { id: 'CHG-9901', name: 'Anker PowerCore', type: 'charger', status: 'pending-transfer', assigned: '', district: 'mbarara', lastUpdate: today, notes: 'Returned from Kyenjojo' },
+                    { id: 'BAG-1002', name: 'RTV Backpack', type: 'bag', status: 'maintenance', assigned: '', district: 'mbarara', lastUpdate: today, notes: 'Broken zip' },
+                    { id: 'POW-0055', name: 'Large Power Bank', type: 'power-bank', status: 'retired', assigned: '', district: 'Kyotera', lastUpdate: today, notes: 'End of life' }
+                ];
+                localStorage.setItem('inventoryData', JSON.stringify(sampleInventory));
             }
         }
         
-        function closeModal(modal) {
-            modal.style.display = 'none';
+        function populateDropdowns() {
+            const supervisors = getSupervisorData();
+            const districtsData = getDistrictData();
+
+            // 1. Populate Assigned To dropdown (item-assigned)
+            itemAssignedSelect.innerHTML = '<option value="">Unassigned</option>';
+            supervisors.sort((a, b) => a.username.localeCompare(b.username)).forEach(user => {
+                const option = new Option(user.username, user.username);
+                itemAssignedSelect.add(option);
+            });
+
+            // 2. Populate District dropdown (item-district) - Handles both string[] and object[] formats
+            itemDistrictSelect.innerHTML = '<option value="">Select a District</option>';
+            let districtNames = [];
+            if (districtsData.length > 0) {
+                if (typeof districtsData[0] === 'string') {
+                    districtNames = districtsData.sort();
+                } else if (typeof districtsData[0] === 'object' && districtsData[0].name) {
+                    districtNames = districtsData.map(d => d.name).sort();
+                }
+            }
+            districtNames.forEach(name => {
+                const option = new Option(name, name.toLowerCase());
+                itemDistrictSelect.add(option);
+            });
+        }
+        
+        function updateStats() {
+            const total = inventory.length;
+            const available = inventory.filter(i => i.status === 'available').length;
+            const inUse = inventory.filter(i => i.status === 'in-use').length;
+            const maintenance = inventory.filter(i => i.status === 'maintenance').length;
+            const retired = inventory.filter(i => i.status === 'retired').length;
+
+            document.getElementById('total-items').textContent = total;
+            document.getElementById('available-items').textContent = available;
+            document.getElementById('in-use-items').textContent = inUse;
+            document.getElementById('maintenance-items').textContent = maintenance;
+            document.getElementById('retired-items').textContent = retired;
+        }
+        
+        /**
+         * @BuggFix: Updated the logic to standardize the item type key before checking.
+         * This handles inconsistencies from bulk uploads (e.g., 'Power Banks' vs 'power-bank').
+         */
+        function updateTypeStats() {
+            const typeCounts = {
+                'tablet': { total: 0, available: 0 },
+                'phone': { total: 0, available: 0 },
+                'charger': { total: 0, available: 0 },
+                'bag': { total: 0, available: 0 },
+                'power-bank': { total: 0, available: 0 },
+            };
+
+            inventory.forEach(item => {
+                // BUG FIX: Standardize the item type by converting to lowercase and replacing spaces/underscores with hyphens
+                // This ensures 'Power Banks' -> 'power-banks' -> 'power-bank' (handled by the dictionary check)
+                const standardizedType = item.type.toLowerCase().replace(/ /g, '-').replace(/s$/, ''); // Remove trailing 's' to match singular key
+
+                if (typeCounts[standardizedType]) {
+                    typeCounts[standardizedType].total++;
+                    if (item.status === 'available') {
+                        typeCounts[standardizedType].available++;
+                    }
+                }
+            });
+
+            for (const type in typeCounts) {
+                document.getElementById(`${type}-total`).textContent = typeCounts[type].total;
+                document.getElementById(`${type}-available`).textContent = typeCounts[type].available;
+            }
+        }
+        
+        function populateTableFilters() {
+            const allTypes = [...new Set(inventory.map(i => i.type.toLowerCase()))].sort();
+            const allStatuses = [...new Set(inventory.map(i => i.status))].sort();
+            const allDistricts = [...new Set(inventory.map(i => i.district))].filter(d => d).sort();
+
+            function populateSelect(selectElement, options) {
+                const currentVal = selectElement.value;
+                selectElement.innerHTML = '<option value="">All</option>';
+                options.forEach(option => {
+                    const display = option.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+                    const opt = new Option(display, option);
+                    if (option === currentVal) opt.selected = true;
+                    selectElement.add(opt);
+                });
+            }
+
+            // Filter for only types that are in the itemTypes array, ensuring 'other' and standard types show up
+            const filterableTypes = itemTypes.filter(t => allTypes.includes(t) || itemTypes.includes(t));
+            
+            if (filterTypeSelect) populateSelect(filterTypeSelect, filterableTypes);
+            if (filterStatusSelect) populateSelect(filterStatusSelect, allStatuses);
+            if (filterDistrictSelect) populateSelect(filterDistrictSelect, allDistricts);
         }
 
-        // --- UI Update Functions ---
-        function renderInventory(items) {
+        function renderTable(filteredData) {
             inventoryTableBody.innerHTML = '';
-            if (items.length === 0) {
-                inventoryTableBody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: var(--secondary); padding: 2rem;">No items found.</td></tr>';
+            if (filteredData.length === 0) {
+                inventoryTableBody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 20px;">No items found matching the current criteria.</td></tr>';
                 return;
             }
-            items.forEach(item => {
-                const row = document.createElement('tr');
-                if (selectedItems.has(item.id)) row.classList.add('selected');
 
-                let statusClass = `status-${item.status.replace('_', '-')}`;
+            filteredData.forEach(item => {
+                const isSelected = selectedItems.has(item.id);
+                const row = document.createElement('tr');
+                row.className = isSelected ? 'selected' : '';
+                
+                const statusClass = `status-${item.status.toLowerCase().replace(/ /g, '-')}`;
+                const displayStatus = item.status.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
 
                 row.innerHTML = `
-                    <td><input type="checkbox" class="item-checkbox" data-item-id="${item.id}" ${selectedItems.has(item.id) ? 'checked' : ''}></td>
+                    <td><input type="checkbox" class="item-checkbox" data-item-id="${item.id}" ${isSelected ? 'checked' : ''}></td>
                     <td>${item.id}</td>
                     <td>${item.name}</td>
-                    <td>${item.type}</td>
-                    <td><span class="status-badge ${statusClass}">${item.status.toUpperCase().replace('-', ' ')}</span></td>
+                    <td>${item.type.charAt(0).toUpperCase() + item.type.slice(1)}</td>
+                    <td><span class="status-badge ${statusClass}">${displayStatus}</span></td>
                     <td>${item.assigned || 'N/A'}</td>
-                    <td>${item.district || 'N/A'}</td>
+                    <td style="text-transform: capitalize;">${item.district || 'N/A'}</td>
                     <td>${item.lastUpdate}</td>
                     <td class="action-buttons">
-                        <button class="btn btn-outline btn-sm edit-btn" data-item-id="${item.id}"><i class="fas fa-edit"></i> Edit</button>
-                        <button class="btn btn-outline btn-sm qr-btn" data-item-id="${item.id}"><i class="fas fa-qrcode"></i> QR</button>
-                        <button class="btn btn-danger btn-sm delete-btn" data-item-id="${item.id}"><i class="fas fa-trash"></i> Delete</button>
+                        <button class="btn btn-outline" onclick="handleEditItem('${item.id}')" title="Edit"><i class="fas fa-edit"></i></button>
+                        <button class="btn btn-outline" onclick="handleQrCode('${item.id}', '${item.name}')" title="QR Code"><i class="fas fa-qrcode"></i></button>
+                        <button class="btn btn-danger" onclick="handleDelete('${item.id}')" title="Delete"><i class="fas fa-trash-alt"></i></button>
                     </td>
                 `;
                 inventoryTableBody.appendChild(row);
             });
-            updateSelectAllCheckboxState();
         }
         
-        function updateStats() {
-            // Calculate stats based on the full inventory list
-            const totalItems = inventory.length;
-            const availableItems = inventory.filter(i => i.status === 'available').length;
-            const inUseItems = inventory.filter(i => i.status === 'in-use').length;
-            const maintenanceItems = inventory.filter(i => i.status === 'maintenance').length;
-            const retiredItems = inventory.filter(i => i.status === 'retired').length;
-
-            // Update the total items card to reflect the entire inventory
-            document.getElementById('total-items').textContent = totalItems;
-            
-            // Update other stat cards as before
-            document.getElementById('available-items').textContent = availableItems;
-            document.getElementById('in-use-items').textContent = inUseItems;
-            document.getElementById('maintenance-items').textContent = maintenanceItems;
-            document.getElementById('retired-items').textContent = retiredItems;
-        }
-
-        function updateTypeStats() {
-            const types = ['tablet', 'phone', 'charger', 'bag', 'power-bank'];
-            
-            types.forEach(type => {
-                // Use the full inventory for calculations
-                const total = inventory.filter(i => i.type === type).length;
-                const available = inventory.filter(i => i.type === type && i.status === 'available').length;
-                
-                // *** BUG FIX: Changed from type.replace() to just 'type' ***
-                const typeId = type; 
-                
-                // Check if elements exist before trying to set textContent
-                const totalEl = document.getElementById(`${typeId}-total`);
-                const availableEl = document.getElementById(`${typeId}-available`);
-
-                if (totalEl) totalEl.textContent = total;
-                if (availableEl) availableEl.textContent = available;
-            });
-        }
-
         function filterInventory() {
             const searchTerm = searchBox.value.toLowerCase();
-            const filterType = document.getElementById('filter-type').value;
-            const filterStatus = document.getElementById('filter-status').value;
-            const filterDistrict = document.getElementById('filter-district').value;
-
-            if (searchTerm || filterType || filterStatus || filterDistrict) selectedItems.clear();
+            const filterType = filterTypeSelect.value.toLowerCase();
+            const filterStatus = filterStatusSelect.value.toLowerCase();
+            const filterDistrict = filterDistrictSelect.value.toLowerCase();
 
             const filtered = inventory.filter(item => {
-                const searchMatch = Object.values(item).some(val => String(val).toLowerCase().includes(searchTerm));
-                const typeMatch = !filterType || item.type === filterType;
-                const statusMatch = !filterStatus || item.status === filterStatus;
-                
-                const itemDistrict = item.district || "N/A";
-                const districtMatch = !filterDistrict || itemDistrict === filterDistrict;
-
-                return searchMatch && typeMatch && statusMatch && districtMatch;
+                const matchesSearch = !searchTerm || 
+                                      item.id.toLowerCase().includes(searchTerm) ||
+                                      item.name.toLowerCase().includes(searchTerm) ||
+                                      item.type.toLowerCase().includes(searchTerm);
+                                      
+                const matchesType = !filterType || item.type.toLowerCase() === filterType;
+                const matchesStatus = !filterStatus || item.status.toLowerCase() === filterStatus;
+                const matchesDistrict = !filterDistrict || (item.district && item.district.toLowerCase() === filterDistrict);
+                                      
+                return matchesSearch && matchesType && matchesStatus && matchesDistrict;
             });
-            renderInventory(filtered);
+
+            renderTable(filtered);
             updateBulkDeleteButton();
         }
-        
-        function populateTableFilters() {
-            const typeFilter = document.getElementById('filter-type');
-            const statusFilter = document.getElementById('filter-status');
-            const districtFilter = document.getElementById('filter-district');
 
-            // Save current values
-            const currentType = typeFilter.value;
-            const currentStatus = statusFilter.value;
-            const currentDistrict = districtFilter.value;
-
-            // Clear old options
-            typeFilter.options.length = 1; // Keep "All Types"
-            statusFilter.options.length = 1; // Keep "All Statuses"
-            districtFilter.options.length = 1; // Keep "All Districts"
-
-            const types = [...new Set(inventory.map(item => item.type))].sort();
-            const statuses = [...new Set(inventory.map(item => item.status))].sort();
-            const districts = [...new Set(inventory.map(item => item.district || "N/A"))].sort();
-
-            types.forEach(type => {
-                typeFilter.add(new Option(type.charAt(0).toUpperCase() + type.slice(1), type));
-            });
-            statuses.forEach(status => {
-                statusFilter.add(new Option(status.replace(/-/g, ' ').toUpperCase(), status));
-            });
-            districts.forEach(district => {
-                districtFilter.add(new Option(district, district));
-            });
-
-            // Restore values
-            typeFilter.value = currentType;
-            statusFilter.value = currentStatus;
-            districtFilter.value = currentDistrict;
+        // --- MODAL / FORM HANDLERS ---
+        function openModal(modalId) {
+            document.getElementById(modalId).style.display = 'flex';
         }
 
-        function updateSelectAllCheckboxState() {
-            const visibleCheckboxes = inventoryTableBody.querySelectorAll('.item-checkbox');
-            if (visibleCheckboxes.length === 0) {
-                selectAllCheckbox.checked = false;
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+        
+        function resetItemForm() {
+            itemForm.reset();
+            itemIdHidden.value = '';
+            itemIdInput.value = '';
+            itemIdInput.disabled = false;
+            document.getElementById('modal-title').textContent = 'Add New Item';
+        }
+
+        function handleNewItem() {
+            resetItemForm();
+            // Automatically select 'mbarara' and 'available' for new items if they exist
+            itemDistrictSelect.value = 'mbarara';
+            itemStatusSelect.value = 'available';
+            openModal('item-modal');
+        }
+
+        function handleItemFormSubmit(e) {
+            e.preventDefault();
+            
+            let item = {};
+            const isEditing = itemIdHidden.value !== '';
+            let finalItemId = itemIdInput.value.trim().toUpperCase();
+
+            // 1. New Item ID generation/validation
+            if (!isEditing) {
+                if (finalItemId === '') {
+                    finalItemId = generateId(itemTypeSelect.value);
+                }
+                if (inventory.some(i => i.id === finalItemId)) {
+                    showNotification('Error: Item ID is already in use.', 'danger');
+                    return;
+                }
+                item.id = finalItemId;
+                item.lastUpdate = new Date().toLocaleDateString();
+            } else {
+                item = inventory.find(i => i.id === itemIdHidden.value);
+                if (!item) {
+                    showNotification('Error: Item not found.', 'danger');
+                    return;
+                }
+            }
+
+            // 2. Collect form data
+            item.name = itemNameInput.value.trim();
+            item.type = itemTypeSelect.value;
+            item.status = itemStatusSelect.value;
+            item.assigned = itemAssignedSelect.value;
+            item.district = itemDistrictSelect.value;
+            item.notes = itemNotesInput.value.trim();
+            
+            // 3. Apply business rules (e.g., central store)
+            item = applyBusinessRules(item);
+
+            // 4. Save to inventory
+            if (!isEditing) {
+                inventory.push(item);
+                logMovement(item.id, 'creation', `New item added. Name: ${item.name}. District: ${item.district}.`);
+                showNotification(`Item ${item.id} added successfully.`);
+            } else {
+                const itemIndex = inventory.findIndex(i => i.id === itemIdHidden.value);
+                if(itemIndex > -1) {
+                    inventory[itemIndex] = item;
+                }
+                logMovement(item.id, 'update', `Item updated. New status: ${item.status}. Assigned to: ${item.assigned || 'N/A'}.`);
+                showNotification(`Item ${item.id} updated successfully.`);
+            }
+
+            saveData();
+            updateAllViews();
+            closeModal('item-modal');
+        }
+
+        function handleEditItem(itemId) {
+            const item = inventory.find(i => i.id === itemId);
+            if (!item) return showNotification('Item not found!', 'danger');
+
+            document.getElementById('modal-title').textContent = `Edit Item: ${itemId}`;
+            
+            // Populate form fields
+            itemIdHidden.value = item.id;
+            itemIdInput.value = item.id;
+            itemIdInput.disabled = true; // Prevent ID modification on edit
+            itemNameInput.value = item.name;
+            itemTypeSelect.value = item.type;
+            itemStatusSelect.value = item.status;
+            itemAssignedSelect.value = item.assigned;
+            itemDistrictSelect.value = item.district;
+            itemNotesInput.value = item.notes;
+
+            openModal('item-modal');
+        }
+
+        function handleDelete(itemId) {
+            if (confirm(`Are you sure you want to permanently delete item ${itemId}? This action cannot be undone.`)) {
+                inventory = inventory.filter(item => item.id !== itemId);
+                logMovement(itemId, 'deletion', `Item permanently deleted.`);
+                showNotification(`Item ${itemId} deleted.`, 'danger');
+                saveData();
+                updateAllViews();
+            }
+        }
+        
+        function handleBulkDelete() {
+            if (selectedItems.size === 0) {
+                showNotification('No items selected for bulk deletion.', 'warning');
                 return;
             }
-            selectAllCheckbox.checked = Array.from(visibleCheckboxes).every(cb => cb.checked);
-        }
 
+            if (confirm(`Are you sure you want to permanently delete ${selectedItems.size} selected item(s)? This action cannot be undone.`)) {
+                const deletedIds = [];
+                inventory = inventory.filter(item => {
+                    const keep = !selectedItems.has(item.id);
+                    if (!keep) {
+                        deletedIds.push(item.id);
+                        logMovement(item.id, 'bulk_deletion', `Item bulk deleted.`);
+                    }
+                    return keep;
+                });
+                
+                selectedItems.clear();
+                showNotification(`${deletedIds.length} item(s) permanently deleted.`, 'danger');
+                saveData();
+                updateAllViews();
+            }
+        }
+        
         function updateBulkDeleteButton() {
-            const bulkDeleteBtn = document.getElementById('bulk-delete-btn');
-            const numSelected = selectedItems.size;
-            if (numSelected > 0) {
+            if (selectedItems.size > 0) {
                 bulkDeleteBtn.style.display = 'inline-flex';
-                bulkDeleteBtn.innerHTML = `<i class="fas fa-trash-alt"></i> Delete (${numSelected})`;
+                bulkDeleteBtn.textContent = `Bulk Delete (${selectedItems.size})`;
             } else {
                 bulkDeleteBtn.style.display = 'none';
             }
         }
-        
-        // --- EVENT HANDLERS & DYNAMIC CONTENT ---
-        function populateDropdowns() {
-            const districts = JSON.parse(localStorage.getItem('districts')) || [];
-            const supervisors = JSON.parse(localStorage.getItem('supervisors')) || [];
-            const activeSupervisors = supervisors.filter(s => s.status === 'active');
 
-            itemAssignedSelect.innerHTML = '<option value="">Unassigned</option>';
-            activeSupervisors.forEach(s => {
-                const option = document.createElement('option');
-                option.value = s.name;
-                option.textContent = `${s.name} (${s.district})`;
-                option.dataset.district = s.district;
-                itemAssignedSelect.appendChild(option);
-            });
-
-            itemDistrictSelect.innerHTML = '<option value="">Unassigned</option>';
-            districts.sort().forEach(d => {
-                const option = document.createElement('option');
-                option.value = d;
-                option.textContent = d;
-                itemDistrictSelect.appendChild(option);
-            });
+        function handleQrCode(itemId, itemName) {
+            document.getElementById('qr-item-name').textContent = itemName;
+            // The QR code stores a simple string that can be scanned for quick lookup
+            generateQrCode(`RTV_INVENTORY_ITEM:${itemId}`); 
+            openModal('qr-modal');
         }
 
-        function setupEventListeners() {
-            document.getElementById('new-item-btn').addEventListener('click', () => openModal('item-modal'));
-            document.getElementById('bulk-upload-btn').addEventListener('click', () => openModal('bulk-upload-modal'));
-            
-            // --- ADDED FILTER LISTENERS ---
-            searchBox.addEventListener('keyup', filterInventory);
-            document.getElementById('filter-type').addEventListener('change', filterInventory);
-            document.getElementById('filter-status').addEventListener('change', filterInventory);
-            document.getElementById('filter-district').addEventListener('change', filterInventory);
-            
-            document.getElementById('logout-btn').addEventListener('click', () => {
-                sessionStorage.removeItem('loggedInUser');
-                window.location.href = 'login.html';
-            });
-
-            document.querySelectorAll('.modal-close').forEach(btn => {
-                btn.addEventListener('click', (e) => closeModal(e.target.closest('.modal')));
-            });
-
-            window.onclick = (event) => {
-                if (event.target.classList.contains('modal')) closeModal(event.target);
-            };
-
-            inventoryTableBody.addEventListener('click', (e) => {
-                const target = e.target;
-                if (target.classList.contains('item-checkbox')) {
-                    const itemId = target.dataset.itemId;
-                    const row = target.closest('tr');
-                    if (target.checked) {
-                        selectedItems.add(itemId);
-                        row.classList.add('selected');
-                    } else {
-                        selectedItems.delete(itemId);
-                        row.classList.remove('selected');
-                    }
-                    updateBulkDeleteButton();
-                    updateSelectAllCheckboxState();
-                    return;
-                }
-                const button = target.closest('button');
-                if (!button) return;
-                const itemId = button.dataset.itemId;
-                if (!itemId) return;
-                const item = inventory.find(i => i.id === itemId);
-                if (button.classList.contains('edit-btn')) openModal('item-modal', true, item);
-                if (button.classList.contains('qr-btn')) openModal('qr-modal', false, item);
-                if (button.classList.contains('delete-btn')) {
-                    if (confirm(`Delete ${item.name} (${item.id})?`)) deleteItem(itemId);
-                }
-            });
-
-            selectAllCheckbox.addEventListener('click', (e) => {
-                const isChecked = e.target.checked;
-                const visibleCheckboxes = inventoryTableBody.querySelectorAll('.item-checkbox');
-                visibleCheckboxes.forEach(checkbox => {
-                    const itemId = checkbox.dataset.itemId;
-                    const row = checkbox.closest('tr');
-                    checkbox.checked = isChecked;
-                    if (isChecked) {
-                        selectedItems.add(itemId);
-                        row.classList.add('selected');
-                    } else {
-                        selectedItems.delete(itemId);
-                        row.classList.remove('selected');
-                    }
-                });
-                updateBulkDeleteButton();
-            });
-
-            document.getElementById('bulk-delete-btn').addEventListener('click', () => {
-                const numSelected = selectedItems.size;
-                if (numSelected === 0) return;
-                if (confirm(`Permanently delete ${numSelected} item(s)?`)) {
-                    inventory = inventory.filter(item => !selectedItems.has(item.id));
-                    logMovement(Array.from(selectedItems).join(', '), 'bulk_deletion', `${numSelected} items permanently deleted.`);
-                    showNotification(`${numSelected} items deleted successfully.`);
-                    selectedItems.clear();
-                    saveData();
-                    updateAllViews();
-                }
-            });
-
-            itemForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                const existingId = itemIdHidden.value;
-                let itemData = {
-                    id: itemIdInput.value.trim() || generateId(itemTypeSelect.value),
-                    name: itemNameInput.value.trim(),
-                    type: itemTypeSelect.value,
-                    status: itemStatusSelect.value,
-                    assigned: itemAssignedSelect.value,
-                    district: itemDistrictSelect.value,
-                    notes: itemNotesInput.value.trim(),
-                    lastUpdate: new Date().toLocaleDateString()
-                };
-
-                itemData = applyBusinessRules(itemData);
-
-                if (existingId) {
-                    const itemIndex = inventory.findIndex(i => i.id === existingId);
-                    if (itemIndex > -1) {
-                        inventory[itemIndex] = {...inventory[itemIndex], ...itemData};
-                        logMovement(itemData.id, 'update', `Item updated by Admin.`);
-                        showNotification(`Item ${itemData.id} updated.`);
-                    }
-                } else {
-                    inventory.unshift(itemData);
-                    logMovement(itemData.id, 'creation', `New item added.`);
-                    showNotification(`New item ${itemData.id} added.`);
-                }
-                saveData();
-                updateAllViews();
-                closeModal(itemModal);
-            });
-            
-            itemAssignedSelect.addEventListener('change', (e) => {
-                if (e.target.value === "") { // Unassigned
-                    itemStatusSelect.value = "available";
-                    itemDistrictSelect.value = "";
-                } else { // Assigned to a supervisor
-                    itemStatusSelect.value = "in-use";
-                    const selectedOption = e.target.options[e.target.selectedIndex];
-                    const district = selectedOption.dataset.district;
-                    if (district) itemDistrictSelect.value = district;
-                }
-            });
-            
-            // --- BULK UPLOAD LOGIC ---
-            const fileUploadInput = document.getElementById('file-upload');
-            const confirmUploadBtn = document.getElementById('confirm-upload');
-            const uploadPreview = document.getElementById('upload-preview');
-            let parsedUploadData = [];
-
-            fileUploadInput.addEventListener('change', (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
-
-                uploadPreview.style.display = 'block';
-                uploadPreview.innerHTML = '<h4>File Preview:</h4><p>Processing file...</p>';
-                confirmUploadBtn.disabled = true;
-
-                if (file.name.endsWith('.csv')) {
-                    Papa.parse(file, {
-                        header: true,
-                        skipEmptyLines: true,
-                        complete: (results) => {
-                            if (results.errors.length > 0) {
-                                console.error("CSV Parsing errors:", results.errors);
-                                uploadPreview.innerHTML += '<p style="color:red;">Error parsing CSV file. Please check the file format and console for details.</p>';
-                                return;
-                            }
-                            parsedUploadData = results.data;
-                            generateUploadPreview(parsedUploadData);
-                        },
-                        error: (err) => {
-                             console.error("CSV Parsing error:", err);
-                             uploadPreview.innerHTML += `<p style="color:red;">Failed to parse CSV: ${err.message}</p>`;
-                        }
-                    });
-                } else if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                        try {
-                            const data = new Uint8Array(event.target.result);
-                            const workbook = XLSX.read(data, { type: 'array' });
-                            const sheetName = workbook.SheetNames[0];
-                            const worksheet = workbook.Sheets[sheetName];
-                            parsedUploadData = XLSX.utils.sheet_to_json(worksheet);
-                            generateUploadPreview(parsedUploadData);
-                        } catch (err) {
-                            console.error("Excel parsing error:", err);
-                            uploadPreview.innerHTML += `<p style="color:red;">Failed to parse Excel file: ${err.message}</p>`;
-                        }
-                    };
-                    reader.readAsArrayBuffer(file);
-                } else {
-                    uploadPreview.innerHTML += '<p style="color:red;">Unsupported file type. Please upload a CSV or XLSX file.</p>';
-                }
-            });
-
-            function generateUploadPreview(data) {
-                if (!data || data.length === 0) {
-                    uploadPreview.innerHTML = '<h4>File Preview:</h4><p style="color:orange;">No data found in the file, or file is empty.</p>';
-                    return;
-                }
-
-                const headers = Object.keys(data[0]);
-                const previewData = data.slice(0, 5); // Show first 5 rows
-
-                let tableHTML = `
-                    <h4>File Preview (${data.length} items found):</h4>
-                    <table id="preview-table">
-                        <thead>
-                            <tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>
-                        </thead>
-                        <tbody>
-                            ${previewData.map(row => `
-                                <tr>${headers.map(h => `<td>${row[h] || ''}</td>`).join('')}</tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                `;
-                if (data.length > 5) {
-                    tableHTML += `<p>...and ${data.length - 5} more row(s).</p>`;
-                }
-                uploadPreview.innerHTML = tableHTML;
-                confirmUploadBtn.disabled = false;
-            }
-
-            confirmUploadBtn.addEventListener('click', () => {
-                if (parsedUploadData.length === 0) {
-                    showNotification('No data to upload.');
-                    return;
-                }
-                
-                let addedCount = 0;
-                let skippedCount = 0;
-                const existingIds = new Set(inventory.map(item => item.id));
-
-                parsedUploadData.forEach(row => {
-                    // Find keys in a case-insensitive way
-                    let nameKey, typeKey, idKey, statusKey, assignedKey, districtKey, notesKey;
-                    for (const key in row) {
-                        const lowerKey = key.toLowerCase();
-                        if (lowerKey.includes('name')) nameKey = key;
-                        if (lowerKey.includes('type')) typeKey = key;
-                        if (lowerKey === 'id') idKey = key;
-                        if (lowerKey === 'status') statusKey = key;
-                        if (lowerKey === 'assigned') assignedKey = key;
-                        if (lowerKey === 'district') districtKey = key;
-                        if (lowerKey === 'notes') notesKey = key;
-                    }
-
-                    const itemName = row[nameKey];
-                    const itemType = row[typeKey];
-
-                    // Basic validation: name and type are required
-                    if (!itemName || !itemType) {
-                        skippedCount++;
-                        return;
-                    }
-                    
-                    const itemId = row[idKey];
-
-                    const newItem = {
-                        id: (itemId && !existingIds.has(String(itemId))) ? String(itemId) : generateId(itemType),
-                        name: itemName,
-                        type: String(itemType).toLowerCase(),
-                        status: row[statusKey] || 'available',
-                        assigned: row[assignedKey] || '',
-                        district: row[districtKey] || 'mbarara',
-                        notes: row[notesKey] || '',
-                        lastUpdate: new Date().toLocaleDateString()
-                    };
-                    
-                    inventory.unshift(newItem); // Add to the beginning of the array
-                    existingIds.add(newItem.id); // Add new ID to set to prevent duplicates within the same upload
-                    addedCount++;
-                });
-
-                logMovement('BULK_UPLOAD', 'creation', `Bulk uploaded ${addedCount} items. Skipped ${skippedCount} rows due to missing data.`);
-                saveData();
-                showNotification(`Successfully added ${addedCount} new items. Skipped ${skippedCount}.`);
-                
-                // Reset upload modal
-                fileUploadInput.value = '';
-                uploadPreview.style.display = 'none';
-                uploadPreview.innerHTML = '';
-                confirmUploadBtn.disabled = true;
-                parsedUploadData = [];
-                
-                closeModal(bulkUploadModal);
-                updateAllViews();
-            });
-        }
-
-        function deleteItem(itemId) {
-            inventory = inventory.filter(item => item.id !== itemId);
-            logMovement(itemId, 'deletion', `Item permanently deleted.`);
-            showNotification(`Item ${itemId} deleted.`);
-            saveData();
-            updateAllViews();
-        }
-        
         function generateQrCode(text) {
-             QRCode.toCanvas(document.getElementById('qr-canvas'), text, { width: 200 }, (error) => {
+             QRCode.toCanvas(document.getElementById('qr-canvas'), text, { width: 200, color: { dark: '#1e293b' } }, (error) => {
                 if (error) console.error(error);
             });
         }
         
+        // --- BULK UPLOAD HANDLERS ---
+        function openBulkUploadModal() {
+            fileUploadInput.value = ''; // Reset input
+            uploadPreviewDiv.style.display = 'none';
+            confirmUploadBtn.disabled = true;
+            openModal('bulk-upload-modal');
+        }
+
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (!file) {
+                uploadPreviewDiv.style.display = 'none';
+                confirmUploadBtn.disabled = true;
+                return;
+            }
+
+            if (file.name.endsWith('.csv')) {
+                Papa.parse(file, {
+                    header: true,
+                    skipEmptyLines: true, // Important for cleaning up CSVs
+                    transformHeader: (header) => header.toLowerCase().trim().replace(/[^a-z0-9]+/g, '_'), // Normalize headers
+                    complete: (results) => parseFile(results.data, results.errors)
+                });
+            } else if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const data = new Uint8Array(event.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const sheetName = workbook.SheetNames[0];
+                    const sheet = workbook.Sheets[sheetName];
+                    // Convert to array of objects, then to CSV string for consistent parsing
+                    const json = XLSX.utils.sheet_to_json(sheet, {header: 1, defval: ''});
+                    const csv = Papa.unparse(json);
+                    
+                    Papa.parse(csv, {
+                        header: true,
+                        skipEmptyLines: true,
+                        transformHeader: (header) => header.toLowerCase().trim().replace(/[^a-z0-9]+/g, '_'),
+                        complete: (results) => parseFile(results.data, results.errors)
+                    });
+                };
+                reader.readAsArrayBuffer(file);
+            } else {
+                showNotification('Unsupported file type.', 'danger');
+            }
+        }
+        
+        function parseFile(data, errors) {
+            if (errors.length > 0) {
+                 // Basic error handling for CSV parsing issues
+                console.error('File parsing errors:', errors);
+            }
+            
+            // Check for required headers after normalization. Note: 'type' might be 'type' or 'item_type' etc.
+            const requiredFields = ['name', 'type', 'district'];
+            const firstRowKeys = Object.keys(data[0] || {});
+            
+            const hasRequiredFields = requiredFields.every(field => firstRowKeys.includes(field));
+            
+            if (!hasRequiredFields) {
+                showNotification(`Missing required column headers in file. Needed: ${requiredFields.join(', ')}. Found: ${firstRowKeys.join(', ')}`, 'danger');
+                confirmUploadBtn.disabled = true;
+                uploadPreviewDiv.style.display = 'none';
+                return;
+            }
+
+            const cleanData = data.filter(row => row.name && row.type && row.district);
+
+            if (cleanData.length === 0) {
+                showNotification('No valid data found in the file. Check for missing "name", "type", or "district" fields.', 'warning');
+                confirmUploadBtn.disabled = true;
+                uploadPreviewDiv.style.display = 'none';
+                return;
+            }
+
+            // Store clean data temporarily for bulk processing
+            confirmUploadBtn.dataset.uploadData = JSON.stringify(cleanData);
+            confirmUploadBtn.disabled = false;
+            
+            // Render preview
+            previewTable.innerHTML = '';
+            const headerRow = document.createElement('tr');
+            ['ID', 'Name', 'Type', 'Status', 'District'].forEach(h => {
+                const th = document.createElement('th');
+                th.textContent = h;
+                headerRow.appendChild(th);
+            });
+            previewTable.appendChild(headerRow);
+
+            cleanData.slice(0, 5).forEach(row => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${row.id || 'AUTO'}</td>
+                    <td>${row.name || 'N/A'}</td>
+                    <td>${row.type || 'N/A'}</td>
+                    <td>${row.status || 'available'}</td>
+                    <td>${row.district || 'N/A'}</td>
+                `;
+                previewTable.appendChild(tr);
+            });
+            uploadPreviewDiv.style.display = 'block';
+            showNotification(`Previewing ${cleanData.length} valid item(s) for upload.`, 'success');
+        }
+
+        function handleBulkUploadConfirm() {
+            const dataString = confirmUploadBtn.dataset.uploadData;
+            if (!dataString) return;
+            
+            const uploadedData = JSON.parse(dataString);
+            const today = new Date().toLocaleDateString();
+            let successCount = 0;
+
+            uploadedData.forEach(row => {
+                let itemId = (row.id && row.id.trim().toUpperCase()) || generateId(row.type);
+
+                // Ensure unique ID
+                while (inventory.some(i => i.id === itemId)) {
+                    itemId = generateId(row.type); 
+                }
+
+                const newItem = {
+                    id: itemId,
+                    name: (row.name || 'Unknown').trim(),
+                    type: (row.type || 'other').toLowerCase().trim(),
+                    status: (row.status || 'available').toLowerCase().trim().replace(/ /g, '-'), // Normalize status
+                    assigned: (row.assigned || '').trim(),
+                    district: (row.district || '').toLowerCase().trim(),
+                    lastUpdate: today,
+                    notes: (row.notes || '').trim()
+                };
+                
+                // Apply rules and save
+                inventory.push(applyBusinessRules(newItem));
+                logMovement(newItem.id, 'bulk_upload', `Item added via bulk upload. Type: ${newItem.type}.`);
+                successCount++;
+            });
+
+            saveData();
+            showNotification(`Successfully uploaded and added ${successCount} item(s).`);
+            closeModal('bulk-upload-modal');
+            updateAllViews();
+        }
+
+        // --- EVENT LISTENERS ---
+        function setupEventListeners() {
+            // Modal close listeners (for 'x' and cancel buttons)
+            document.querySelectorAll('.modal-close').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const modal = e.target.closest('.modal');
+                    if(modal) closeModal(modal.id);
+                });
+            });
+
+            // Main buttons
+            document.getElementById('logout-btn').addEventListener('click', () => {
+                sessionStorage.removeItem('loggedInUser');
+                window.location.href = 'login.html';
+            });
+            document.getElementById('new-item-btn').addEventListener('click', handleNewItem);
+            document.getElementById('bulk-upload-btn').addEventListener('click', openBulkUploadModal);
+            bulkDeleteBtn.addEventListener('click', handleBulkDelete);
+
+            // Form Submissions
+            itemForm.addEventListener('submit', handleItemFormSubmit);
+            
+            // Search and Filters
+            searchBox.addEventListener('input', filterInventory);
+            filterTypeSelect.addEventListener('change', filterInventory);
+            filterStatusSelect.addEventListener('change', filterInventory);
+            filterDistrictSelect.addEventListener('change', filterInventory);
+
+            // Checkbox handlers
+            selectAllCheckbox.addEventListener('change', (e) => {
+                const isChecked = e.target.checked;
+                document.querySelectorAll('.item-checkbox').forEach(checkbox => {
+                    checkbox.checked = isChecked;
+                    const itemId = checkbox.dataset.itemId;
+                    if (isChecked) {
+                        selectedItems.add(itemId);
+                        checkbox.closest('tr').classList.add('selected');
+                    } else {
+                        selectedItems.delete(itemId);
+                        checkbox.closest('tr').classList.remove('selected');
+                    }
+                });
+                updateBulkDeleteButton();
+            });
+            inventoryTableBody.addEventListener('change', (e) => {
+                if (e.target.classList.contains('item-checkbox')) {
+                    const itemId = e.target.dataset.itemId;
+                    if (e.target.checked) {
+                        selectedItems.add(itemId);
+                        e.target.closest('tr').classList.add('selected');
+                    } else {
+                        selectedItems.delete(itemId);
+                        e.target.closest('tr').classList.remove('selected');
+                    }
+                    // If one is unchecked, uncheck select-all
+                    if (!e.target.checked) selectAllCheckbox.checked = false;
+                    updateBulkDeleteButton();
+                }
+            });
+
+            // Bulk Upload Listeners
+            fileUploadInput.addEventListener('change', handleFileSelect);
+            confirmUploadBtn.addEventListener('click', handleBulkUploadConfirm);
+        }
+
+        function showNotification(message, type = 'success') {
+            const toast = document.getElementById('notification-toast');
+            toast.textContent = message;
+            toast.className = `notification show ${type}`;
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
         function updateAllViews() {
             populateTableFilters(); // Re-populate filters
             filterInventory(); // Then filter the view
@@ -1357,12 +1408,13 @@
         function initApp() {
             initializeData(); // Ensure sample inventory is available
             loadData(); // Load all data
-            populateDropdowns(); // Populate dropdowns with user/district data (from login seeder)
+            populateDropdowns(); // Populate modal dropdowns
             setupEventListeners();
             updateAllViews();
         }
 
         window.addEventListener('storage', (e) => {
+            // Listen for changes in other tabs/windows
             if (e.key === 'inventoryData' || e.key === 'districts' || e.key === 'supervisors') {
                 loadData();
                 populateDropdowns();
