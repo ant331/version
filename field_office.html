@@ -257,6 +257,7 @@
         .status-retired { color: #991b1b; background-color: #fee2e2; }
         .status-pending-approval { color: #9a3412; background-color: #ffedd5; }
         .status-in-storage-field { color: #5b21b6; background-color: #ede9fe; }
+        .status-reported-missing { color: #b91c1c; background-color: #fee2e2; }
 
 
         .action-buttons {
@@ -649,6 +650,7 @@
         const getInventoryData = () => JSON.parse(localStorage.getItem(INVENTORY_KEY)) || [];
         const getDistricts = () => JSON.parse(localStorage.getItem(DISTRICTS_KEY)) || [];
         const getSupervisors = () => JSON.parse(localStorage.getItem(SUPERVISORS_KEY)) || [];
+        const getMovementLogs = () => JSON.parse(localStorage.getItem(MOVEMENT_LOGS_KEY)) || [];
         const saveInventoryData = (inventory) => {
             localStorage.setItem(INVENTORY_KEY, JSON.stringify(inventory));
             window.dispatchEvent(new Event('storage'));
@@ -666,18 +668,35 @@
             localStorage.setItem(MOVEMENT_LOGS_KEY, JSON.stringify(movementLogs));
         }
 
+        // ---
+        // --- 🚨 BUG FIX 🚨
+        // --- The original function would crash if settings.html was visited,
+        // --- as 'districts' would become an object array, and d.trim() would fail.
+        // --- This new function correctly handles both string[] and object[] data.
+        // ---
         function loadDistrictDropdown() {
-            const districts = getDistricts();
+            const districtsData = getDistricts();
             const dropdown = document.getElementById('district-select');
             
             dropdown.innerHTML = '<option value="">-- Select District --</option>';
             
-            districts.sort().forEach(district => {
+            let districtNames = [];
+            if (districtsData.length > 0) {
+                 if (typeof districtsData[0] === 'string') {
+                    // Handles data from login.html seeder (e.g., ["Kampala", "Gulu"])
+                    districtNames = districtsData.sort();
+                } else if (typeof districtsData[0] === 'object' && districtsData[0].name) {
+                    // Handles data from settings.html (e.g., [{name: "Kampala", ...}])
+                    districtNames = districtsData.map(d => d.name).sort();
+                }
+            }
+           
+            districtNames.forEach(districtName => {
                 // Field offices are any district that is not the central store (Mbarara)
-                if (district.toLowerCase() !== 'mbarara') { 
+                if (districtName.toLowerCase() !== 'mbarara') { 
                     const option = document.createElement('option');
-                    option.value = district.toLowerCase();
-                    option.textContent = district;
+                    option.value = districtName.toLowerCase();
+                    option.textContent = districtName; // Use the original cased name for display
                     dropdown.appendChild(option);
                 }
             });
@@ -693,8 +712,21 @@
             currentDistrict = district;
             
             localStorage.setItem('lastSelectedFieldOffice', district);
-            const districts = getDistricts();
-            const formattedName = districts.find(d => d.toLowerCase() === district) || district;
+            
+            // --- FIX ---
+            // Find the proper display name from the (potentially mixed-type) districts data
+            const districtsData = getDistricts();
+            let formattedName = district; // Default
+            if (districtsData.length > 0) {
+                 if (typeof districtsData[0] === 'string') {
+                    formattedName = districtsData.find(d => d.toLowerCase() === district) || district;
+                 } else if (typeof districtsData[0] === 'object' && districtsData[0].name) {
+                    const districtObj = districtsData.find(d => d.name.toLowerCase() === district);
+                    if (districtObj) formattedName = districtObj.name;
+                 }
+            }
+            // --- END FIX ---
+            
             document.getElementById('district-name').textContent = formattedName;
             
             loadFieldOfficeData();
@@ -722,7 +754,7 @@
         function updateStats(districtInventory) {
             document.getElementById('total-district-items').textContent = districtInventory.length;
             // Items with supervisors are those "in-use" by data collectors or "available" in the supervisor's local stock.
-            document.getElementById('items-with-supervisors').textContent = districtInventory.filter(item => ['in-use', 'available'].includes(item.status)).length;
+            document.getElementById('items-with-supervisors').textContent = districtInventory.filter(item => ['in-use', 'available', 'maintenance', 'reported-missing'].includes(item.status)).length;
             document.getElementById('items-in-storage').textContent = districtInventory.filter(item => item.status === 'in-storage-field').length;
             document.getElementById('items-in-maintenance').textContent = districtInventory.filter(item => item.status === 'maintenance').length;
         }
@@ -739,7 +771,7 @@
             
             // Sort items to bring actionable items (e.g., in storage) to the top.
             items.sort((a, b) => {
-                const statusOrder = { 'in-storage-field': 1, 'in-use': 2, 'available': 3, 'maintenance': 4 };
+                const statusOrder = { 'in-storage-field': 1, 'in-use': 2, 'available': 3, 'maintenance': 4, 'reported-missing': 5 };
                 return (statusOrder[a.status] || 99) - (statusOrder[b.status] || 99) || a.id.localeCompare(b.id);
             });
             
@@ -761,7 +793,7 @@
         
         function renderAcknowledgementTable(returnedItems) {
             const tableBody = document.getElementById('acknowledgement-table-body');
-            const supervisors = getSupervisors();
+            const logs = getMovementLogs();
             tableBody.innerHTML = '';
             
             if (!currentDistrict) {
@@ -772,17 +804,30 @@
                 tableBody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 1.5rem;">No items to acknowledge.</td></tr>';
                 return;
             }
-
-            const supervisor = supervisors.find(s => s.district.toLowerCase() === currentDistrict) || { name: 'Unknown Supervisor' };
+            
+            // --- 🚨 BUG FIX ---
+            // Find the most recent "return to field office" log for each item to get the supervisor's name
+            const returnLogMap = new Map();
+            logs.forEach(log => {
+                if (log.action === 'return' && !returnLogMap.has(log.itemId)) {
+                    // Extract supervisor name from log details
+                    const match = log.details.match(/from Supervisor (.*?)\./);
+                    if (match) {
+                        returnLogMap.set(log.itemId, match[1]);
+                    }
+                }
+            });
+            // --- END FIX ---
 
             returnedItems.forEach(item => {
+                const supervisorName = returnLogMap.get(item.id) || 'Unknown Supervisor';
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>${item.id}</td>
                     <td>${item.name}</td>
-                    <td>${supervisor.name}</td>
+                    <td>${supervisorName}</td>
                     <td>
-                        <button class="btn btn-success" data-item-id="${item.id}" onclick="handleAcknowledgeReturn('${item.id}', '${supervisor.name}')">
+                        <button class="btn btn-success" data-item-id="${item.id}" data-supervisor-name="${supervisorName}">
                             <i class="fas fa-check-circle"></i> Acknowledge
                         </button>
                     </td>
@@ -791,7 +836,13 @@
             });
         }
         
-        function handleAcknowledgeReturn(itemId, supervisorName) {
+        function handleAcknowledgeReturn(e) {
+            const button = e.target.closest('button');
+            if (!button) return;
+
+            const itemId = button.dataset.itemId;
+            const supervisorName = button.dataset.supervisorName;
+
             if (confirm(`Acknowledge receipt of item ${itemId} from ${supervisorName}? This will move it to the 'Return to Admin' queue.`)) {
                 let inventory = getInventoryData();
                 const itemIndex = inventory.findIndex(i => i.id === itemId);
@@ -799,7 +850,7 @@
                     inventory[itemIndex].status = 'pending-approval';
                     inventory[itemIndex].lastUpdate = new Date().toLocaleDateString();
                     saveInventoryData(inventory);
-                    logMovement(itemId, 'acknowledge_return', `Item received from Supervisor ${supervisorName} at field office.`);
+                    logMovement(itemId, 'acknowledge_return', `Item received from Supervisor ${supervisorName} at ${currentDistrict} field office.`);
                     showNotification(`Item ${itemId} acknowledged and is now pending return to admin.`);
                     loadFieldOfficeData();
                 }
@@ -815,6 +866,9 @@
             document.getElementById('district-select').addEventListener('change', (e) => {
                 setCurrentDistrict(e.target.value);
             });
+            
+            // Listener for the acknowledgement table
+            document.getElementById('acknowledgement-table-body').addEventListener('click', handleAcknowledgeReturn);
             
             // Connect the quick action button to the modal function
             document.getElementById('return-to-admin-btn').addEventListener('click', () => openBulkActionModal('return_to_admin'));
@@ -833,10 +887,12 @@
         }
         
         function openBulkActionModal(actionType) {
+            // --- FIX: Add guard clause ---
             if (!currentDistrict) {
                 showNotification('Please select a field office first.');
                 return;
             }
+            // --- END FIX ---
             
             const modal = document.getElementById('bulk-action-modal');
             const modalTitle = document.getElementById('bulk-modal-title');
