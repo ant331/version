@@ -277,21 +277,9 @@
             const selectedCountSpan = document.getElementById('selected-count');
             const districtSelect = document.getElementById('district-select');
             const activitySelect = document.getElementById('activity-select');
-            const otherActivityGroup = document.getElementById('other-activity-group'); // NEW
-            const otherActivityText = document.getElementById('other-activity-text'); // NEW
+            const otherActivityGroup = document.getElementById('other-activity-group');
+            const otherActivityText = document.getElementById('other-activity-text');
             const transferBtn = document.getElementById('initiate-transfer-btn');
-
-            // --- Data Initialization ---
-            function initializeData() {
-                // Ensure default data exists so the page doesn't break if visited first.
-                if (!localStorage.getItem('districts')) {
-                    const defaultDistricts = ["Kagadi", "Kibaale", "Kyenjojo", "Kyegegwa", "Mbarara"];
-                    localStorage.setItem('districts', JSON.stringify(defaultDistricts));
-                }
-                if (!localStorage.getItem('inventoryData')) {
-                    localStorage.setItem('inventoryData', JSON.stringify([]));
-                }
-            }
 
             // --- Data Functions ---
             const getInventoryData = () => JSON.parse(localStorage.getItem('inventoryData')) || [];
@@ -323,13 +311,30 @@
                 updateTransferUI();
             }
 
+            // ---
+            // --- 🚨 BUG FIX 🚨
+            // --- This function is now resilient. It can read districts saved as
+            // --- a string[] (from login.html) or an object[] (from settings.html).
+            // ---
             function populateDistricts() {
-                const districts = getDistrictData().sort();
+                const districtData = getDistrictData();
+                let districtNames = [];
+
+                if (districtData.length > 0) {
+                    // Check if the store is an array of strings (from login.html)
+                    if (typeof districtData[0] === 'string') {
+                        districtNames = districtData.sort();
+                    } else if (typeof districtData[0] === 'object' && districtData[0].name) {
+                        // Handle the object structure from settings.html
+                        districtNames = districtData.map(d => d.name).sort();
+                    }
+                }
+                
                 districtSelect.innerHTML = '<option value="">-- Select a District --</option>';
-                districts.forEach(d => {
+                districtNames.forEach(d => {
                     // Do not allow transferring to the source location
                     if (d.toLowerCase() !== 'mbarara') {
-                       const option = new Option(d, d.toLowerCase());
+                       const option = new Option(d, d.toLowerCase()); // Use proper name for text, value for ID
                        districtSelect.add(option);
                     }
                 });
@@ -413,7 +418,6 @@
                 
                 selectedCountSpan.textContent = itemsToTransfer.size;
                 
-                // --- MODIFIED LOGIC ---
                 const isOtherSurvey = activitySelect.value === 'Other Venn Surveys';
                 otherActivityGroup.style.display = isOtherSurvey ? 'block' : 'none';
                 
@@ -448,7 +452,7 @@
 
                 const itemId = e.target.dataset.itemId;
                 itemsToTransfer.delete(itemId);
-                renderAvailableItems();
+                renderAvailableItems(); // Re-render available items to uncheck the box
                 updateTransferUI();
             }
             
@@ -456,7 +460,6 @@
                 const destinationDistrict = districtSelect.value;
                 let activity = activitySelect.value; // Get selected activity
 
-                // --- MODIFICATION: Check for 'Other' activity ---
                 if (activity === 'Other Venn Surveys') {
                     const otherActivity = otherActivityText.value.trim();
                     if (otherActivity === "") {
@@ -469,7 +472,10 @@
                 if (itemsToTransfer.size === 0 || !destinationDistrict || !activity) return;
                 
                 const itemNames = Array.from(itemsToTransfer.values()).map(i => ` - ${i.name} (${i.id})`).join('\n');
-                const confirmMessage = `Are you sure you want to transfer ${itemsToTransfer.size} item(s) to the ${destinationDistrict} district for the ${activity} activity?\n\nItems:\n${itemNames}`;
+                // UPDATED: Use selected text for a user-friendly district name
+                const destinationDistrictName = districtSelect.options[districtSelect.selectedIndex].text;
+                const confirmMessage = `Are you sure you want to transfer ${itemsToTransfer.size} item(s) to the ${destinationDistrictName} district for the ${activity} activity?\n\Items:\n${itemNames}`;
+
 
                 if (confirm(confirmMessage)) {
                     let inventory = getInventoryData();
@@ -485,7 +491,8 @@
                             inventory[itemIndex].lastUpdate = today;
                             inventory[itemIndex].activity = activity; // Store the (potentially custom) activity
                             
-                            const logDetails = `Transferred from Mbarara store to ${destinationDistrict} for ${activity}. Awaiting supervisor acknowledgement.`;
+                            // UPDATED: Use user-friendly district name in log
+                            const logDetails = `Transferred from Mbarara store to ${destinationDistrictName} for ${activity}. Awaiting supervisor acknowledgement.`;
                             
                             logs.unshift({
                                 itemId: id,
@@ -499,13 +506,14 @@
                     saveInventoryData(inventory);
                     saveMovementLogs(logs);
                     
-                    showNotification(`${itemsToTransfer.size} item(s) successfully transferred to ${destinationDistrict}.`);
+                    // UPDATED: Use user-friendly district name in notification
+                    showNotification(`${itemsToTransfer.size} item(s) successfully transferred to ${destinationDistrictName}.`);
 
                     itemsToTransfer.clear();
                     districtSelect.value = '';
                     activitySelect.value = ''; // Reset activity dropdown
                     otherActivityText.value = ''; // Reset 'other' text field
-                    loadPage();
+                    loadPage(); // This will re-render everything
                 }
             }
 
@@ -515,7 +523,7 @@
                 searchInput.addEventListener('input', renderAvailableItems);
                 districtSelect.addEventListener('change', updateTransferUI);
                 activitySelect.addEventListener('change', updateTransferUI);
-                otherActivityText.addEventListener('input', updateTransferUI); // NEW: Add listener for the text input
+                otherActivityText.addEventListener('input', updateTransferUI);
                 transferBtn.addEventListener('click', handleInitiateTransfer);
                 document.getElementById('logout-btn').addEventListener('click', () => {
                     sessionStorage.removeItem('loggedInUser');
@@ -532,7 +540,6 @@
             }
 
             // --- Initial Call ---
-            initializeData();
             setupUI();
             setupEventListeners();
             loadPage();
